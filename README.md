@@ -1,6 +1,8 @@
 # build_and_improve_fdir
 Utilize the model checker PRISM for generating fault isolation and recovery controllers
 
+![gui screenshot](gui_screenshot.png)
+
 ## Getting started
 clone the repository, navigate to its root and execute the install script:
 ```
