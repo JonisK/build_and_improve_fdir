@@ -1,0 +1,482 @@
+digraph "earth_observation_v4"
+{
+
+bgcolor = "#ffffff"
+
+node [
+class = "node"
+,fillcolor = "#ff00ff",style = "filled"
+,width = "0.152778",height = "0.152778"
+,shape = "ellipse"
+,color = "#000000"
+,penwidth = "1"
+,"_vis_" = "label"
+];
+
+
+"N13" [
+pos = "10.7639,6.94444!"
+,xlabel = "INERT"
+]
+
+"N59" [
+pos = "33.6806,0.347222!"
+,xlabel = "orbit"
+]
+
+"N32" [
+pos = "12.1528,-3.47222!"
+,xlabel = "star_tracker_2"
+]
+
+"N50" [
+pos = "30.2083,-2.08333!"
+,xlabel = "rtc_ok"
+]
+
+"N47" [
+pos = "32.6389,-3.47222!"
+,xlabel = "gps_fix"
+]
+
+"N7" [
+pos = "-1.04167,6.94444!"
+,xlabel = "SUN_MAG"
+]
+
+"N36" [
+pos = "19.7917,-0.694444!"
+,xlabel = "OR"
+]
+
+"N14" [
+pos = "-5.90278,-2.08333!"
+,xlabel = "torque_rods"
+]
+
+"N48" [
+pos = "29.5139,-0.694444!"
+,xlabel = "OR"
+]
+
+"N46" [
+pos = "30.5556,1.73611!"
+,xlabel = "orbit_propagator"
+]
+
+"N15" [
+pos = "-7.63889,-3.47222!"
+,xlabel = "torque_rod_1"
+]
+
+"N54" [
+pos = "13.8889,5.55556!"
+]
+
+"N17" [
+pos = "-4.16667,-3.47222!"
+,xlabel = "torque_rod_3"
+]
+
+"N21" [
+pos = "-0.347222,-3.47222!"
+,xlabel = "reaction_wheel_2"
+]
+
+"N53" [
+pos = "7.98611,5.55556!"
+]
+
+"N16" [
+pos = "-5.90278,-3.47222!"
+,xlabel = "torque_rod_2"
+]
+
+"N25" [
+pos = "6.94444,-2.08333!"
+,xlabel = "OR"
+]
+
+"N41" [
+pos = "18.4028,-3.47222!"
+,xlabel = "digital_sun_sensor_3"
+]
+
+"N40" [
+pos = "16.3194,-3.47222!"
+,xlabel = "digital_sun_sensor_2"
+]
+
+"N9" [
+pos = "13.8889,6.94444!"
+,xlabel = "TARGET"
+]
+
+"N20" [
+pos = "-2.43056,-3.47222!"
+,xlabel = "reaction_wheel_1"
+]
+
+"N28" [
+pos = "11.1111,2.08333!"
+,xlabel = "kalman_filter"
+]
+
+"N1" [
+pos = "-2.43056,6.94444!"
+,xlabel = "DETUMB_MAG"
+]
+
+"N58" [
+pos = "29.5139,0.347222!"
+,xlabel = "time"
+]
+
+"N56" [
+pos = "15.9722,6.94444!"
+,xlabel = "IDLE"
+]
+
+"N31" [
+pos = "10.0694,-3.47222!"
+,xlabel = "star_tracker_1"
+]
+
+"N45" [
+pos = "30.5556,3.125!"
+,xlabel = "guidance_module"
+]
+
+"N30" [
+pos = "11.1111,-2.08333!"
+,xlabel = "OR"
+]
+
+"N42" [
+pos = "25.6944,-3.47222!"
+,xlabel = "analog_sun_sensor_3"
+]
+
+"N26" [
+pos = "5.90278,-3.47222!"
+,xlabel = "magnetometer_1"
+]
+
+"N6" [
+pos = "4.51389,6.94444!"
+,xlabel = "SUN_RW"
+]
+
+"N2" [
+pos = "3.125,6.94444!"
+,xlabel = "DETUMB_RW"
+]
+
+"N22" [
+pos = "1.73611,-3.47222!"
+,xlabel = "reaction_wheel_3"
+]
+
+"N37" [
+pos = "16.3194,-2.08333!"
+,xlabel = "digital_sun_sensors"
+]
+
+"N33" [
+pos = "20.8333,-3.47222!"
+,xlabel = "analog_sun_sensor_1"
+]
+
+"N38" [
+pos = "23.2639,-2.08333!"
+,xlabel = "analog_sun_sensors"
+]
+
+"N27" [
+pos = "7.98611,-3.47222!"
+,xlabel = "magnetometer_2"
+]
+
+"N55" [
+pos = "27.7778,-3.47222!"
+,xlabel = "gps_time"
+]
+
+"N39" [
+pos = "14.2361,-3.47222!"
+,xlabel = "digital_sun_sensor_1"
+]
+
+"N49" [
+pos = "34.7222,-3.47222!"
+,xlabel = "orbit_data_from_ground"
+]
+
+"N19" [
+pos = "0.694444,-2.08333!"
+,xlabel = ">=3"
+]
+
+"N24" [
+pos = "6.94444,-0.694444!"
+,xlabel = "magnetometer"
+]
+
+"N3" [
+pos = "0.347222,6.94444!"
+,xlabel = "THOMSON_MAG"
+]
+
+"N5" [
+pos = "7.29167,6.94444!"
+,xlabel = "NADIR"
+]
+
+"N57" [
+pos = "1.73611,6.94444!"
+,xlabel = "DESAT"
+]
+
+"N35" [
+pos = "19.7917,0.694444!"
+,xlabel = "sun_vector"
+]
+
+"N43" [
+pos = "33.6806,-2.08333!"
+,xlabel = "OR"
+]
+
+"N23" [
+pos = "3.81944,-3.47222!"
+,xlabel = "reaction_wheel_4"
+]
+
+"N34" [
+pos = "23.2639,-3.47222!"
+,xlabel = "analog_sun_sensor_2"
+]
+
+"N52" [
+pos = "31.25,-3.47222!"
+,xlabel = "time_from_ground"
+]
+
+"N51" [
+pos = "29.5139,-3.47222!"
+,xlabel = "realtime_clock"
+]
+
+"N18" [
+pos = "0.694444,-0.694444!"
+,xlabel = "reaction_wheels"
+]
+
+"N29" [
+pos = "11.1111,-0.694444!"
+,xlabel = "star_tracker"
+]
+
+
+
+edge [
+class = "edge"
+,weight = "1"
+,penwidth = "1"
+,"_vis_" = "label"
+,"color" = "#a0a0a4"
+,"style" = "solid"
+];
+
+
+"N54" -> "N28" [id = "E55"
+];
+
+"N45" -> "N46" [id = "E34"
+];
+
+"N7" -> "N24" [id = "E61"
+];
+
+"N28" -> "N35" [id = "E21"
+];
+
+"N57" -> "N18" [id = "E65"
+];
+
+"N19" -> "N23" [id = "E10"
+];
+
+"N53" -> "N14" [id = "E47"
+];
+
+"N54" -> "N14" [id = "E54"
+];
+
+"N43" -> "N49" [id = "E37"
+];
+
+"N19" -> "N22" [id = "E9"
+];
+
+"N36" -> "N37" [id = "E23"
+];
+
+"N18" -> "N19" [id = "E6"
+];
+
+"N57" -> "N24" [id = "E66"
+];
+
+"N37" -> "N41" [id = "E27"
+];
+
+"N28" -> "N46" [id = "E42"
+];
+
+"N56" -> "N28" [id = "E38"
+];
+
+"N1" -> "N24" [id = "E11"
+];
+
+"N37" -> "N40" [id = "E26"
+];
+
+"N38" -> "N33" [id = "E28"
+];
+
+"N35" -> "N36" [id = "E22"
+];
+
+"N3" -> "N28" [id = "E59"
+];
+
+"N25" -> "N26" [id = "E13"
+];
+
+"N57" -> "N29" [id = "E67"
+];
+
+"N2" -> "N28" [id = "E43"
+];
+
+"N38" -> "N42" [id = "E30"
+];
+
+"N7" -> "N14" [id = "E60"
+];
+
+"N13" -> "N53" [id = "E51"
+];
+
+"N59" -> "N43" [id = "E69"
+];
+
+"N14" -> "N15" [id = "E2"
+];
+
+"N54" -> "N45" [id = "E32"
+];
+
+"N24" -> "N25" [id = "E12"
+];
+
+"N28" -> "N24" [id = "E16"
+];
+
+"N2" -> "N18" [id = "E5"
+];
+
+"N6" -> "N53" [id = "E44"
+];
+
+"N38" -> "N34" [id = "E29"
+];
+
+"N19" -> "N20" [id = "E7"
+];
+
+"N53" -> "N18" [id = "E46"
+];
+
+"N3" -> "N14" [id = "E58"
+];
+
+"N14" -> "N16" [id = "E3"
+];
+
+"N48" -> "N50" [id = "E39"
+];
+
+"N1" -> "N14" [id = "E1"
+];
+
+"N37" -> "N39" [id = "E25"
+];
+
+"N28" -> "N29" [id = "E17"
+];
+
+"N48" -> "N55" [id = "E63"
+];
+
+"N36" -> "N38" [id = "E24"
+];
+
+"N53" -> "N28" [id = "E48"
+];
+
+"N30" -> "N31" [id = "E19"
+];
+
+"N46" -> "N59" [id = "E36"
+];
+
+"N7" -> "N35" [id = "E62"
+];
+
+"N58" -> "N48" [id = "E68"
+];
+
+"N43" -> "N47" [id = "E35"
+];
+
+"N25" -> "N27" [id = "E14"
+];
+
+"N50" -> "N51" [id = "E40"
+];
+
+"N46" -> "N58" [id = "E33"
+];
+
+"N19" -> "N21" [id = "E8"
+];
+
+"N29" -> "N30" [id = "E18"
+];
+
+"N54" -> "N18" [id = "E31"
+];
+
+"N5" -> "N53" [id = "E52"
+];
+
+"N50" -> "N52" [id = "E41"
+];
+
+"N14" -> "N17" [id = "E4"
+];
+
+"N57" -> "N14" [id = "E64"
+];
+
+"N9" -> "N54" [id = "E15"
+];
+
+"N30" -> "N32" [id = "E20"
+];
+
+
+}

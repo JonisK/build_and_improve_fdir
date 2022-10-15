@@ -1,0 +1,499 @@
+digraph "space_tug_v7"
+{
+
+bgcolor = "#ffffff"
+
+node [
+class = "node"
+,fillcolor = "#ff00ff",style = "filled"
+,width = "0.152778",height = "0.152778"
+,shape = "ellipse"
+,color = "#000000"
+,penwidth = "1"
+,"_vis_" = "id|label"
+];
+
+
+"N30" [
+pos = "2.43056,-2.77778!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "OR"
+]
+
+"N18" [
+pos = "-3.125,-1.38889!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "reaction_control"
+]
+
+"N53" [
+pos = "-0.347222,-9.86865e-17!"
+,fillcolor = "#00cc33",style = "filled"
+]
+
+"N37" [
+pos = "1.04167,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "gyro_2"
+]
+
+"N59" [
+pos = "4.51389,-2.08333!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "orbit"
+]
+
+"N20" [
+pos = "-5.55556,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "thr_1"
+]
+
+"N13" [
+pos = "1.38889,0.694444!"
+,fillcolor = "#ff9900",style = "filled"
+,xlabel = "OC"
+]
+
+"N56" [
+pos = "2.43056,0.694444!"
+,fillcolor = "#ff9900",style = "filled"
+,xlabel = "INITIALIZE"
+]
+
+"N21" [
+pos = "-4.86111,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "thr_2"
+]
+
+"N12" [
+pos = "4.51389,0.694444!"
+,fillcolor = "#ff9900",style = "filled"
+,xlabel = "SLEW"
+]
+
+"N33" [
+pos = "4.16667,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "gps"
+]
+
+"N51" [
+pos = "3.47222,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "rtc"
+]
+
+"N1" [
+pos = "-2.77778,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "thr_5"
+]
+
+"N58" [
+pos = "3.81944,-2.08333!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "time"
+]
+
+"N14" [
+pos = "-0.694444,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "thr_8"
+]
+
+"N4" [
+pos = "-1.73611,0.694444!"
+,fillcolor = "#ff9900",style = "filled"
+,xlabel = "THOMSON"
+]
+
+"N45" [
+pos = "4.16667,-0.694444!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "guidance_module"
+]
+
+"N46" [
+pos = "4.16667,-1.38889!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "orbit_propagator"
+]
+
+"N23" [
+pos = "-3.47222,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "thr_4"
+]
+
+"N2" [
+pos = "-3.125,0.694444!"
+,fillcolor = "#ff9900",style = "filled"
+,xlabel = "DETUMB"
+]
+
+"N28" [
+pos = "2.43056,-0.694444!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "kalman_filter"
+]
+
+"N6" [
+pos = "4.51389,-2.77778!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "OR"
+]
+
+"N44" [
+pos = "0.347222,0.694444!"
+,fillcolor = "#ff9900",style = "filled"
+,xlabel = "DEPLOY"
+]
+
+"N54" [
+pos = "4.16667,-9.86865e-17!"
+,fillcolor = "#00cc33",style = "filled"
+]
+
+"N9" [
+pos = "4.86111,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "tle"
+]
+
+"N31" [
+pos = "2.08333,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "str_1"
+]
+
+"N8" [
+pos = "3.81944,0.694444!"
+,fillcolor = "#ff9900",style = "filled"
+,xlabel = "GS"
+]
+
+"N36" [
+pos = "0.347222,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "gyro_1"
+]
+
+"N29" [
+pos = "2.43056,-2.08333!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "star_tracker"
+]
+
+"N7" [
+pos = "-1.38889,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "thr_7"
+]
+
+"N32" [
+pos = "2.77778,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "str_2"
+]
+
+"N22" [
+pos = "-4.16667,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "thr_3"
+]
+
+"N34" [
+pos = "0.694444,-2.08333!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "gyroscope"
+]
+
+"N19" [
+pos = "-3.125,-2.08333!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = ">=7"
+]
+
+"N35" [
+pos = "0.694444,-2.77778!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "OR"
+]
+
+"N5" [
+pos = "-0.694444,0.694444!"
+,fillcolor = "#ff9900",style = "filled"
+,xlabel = "SUN"
+]
+
+"N3" [
+pos = "-2.08333,-3.47222!"
+,fillcolor = "#3399ff",style = "filled"
+,xlabel = "thr_6"
+]
+
+"N48" [
+pos = "3.81944,-2.77778!"
+,fillcolor = "#00cc33",style = "filled"
+,xlabel = "OR"
+]
+
+
+
+edge [
+class = "edge"
+,weight = "1"
+,penwidth = "1"
+,"_vis_" = "label"
+,"color" = "#a0a0a4"
+,"style" = "solid"
+];
+
+
+"N54" -> "N28" [id = "E55"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N48" -> "N33" [id = "E13"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N58" -> "N48" [id = "E68"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N44" -> "N53" [id = "E56"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N35" -> "N37" [id = "E27"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N13" -> "N53" [id = "E51"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N46" -> "N58" [id = "E33"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N34" -> "N35" [id = "E25"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N19" -> "N22" [id = "E9"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N19" -> "N3" [id = "E2"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N19" -> "N1" [id = "E1"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N19" -> "N23" [id = "E10"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N56" -> "N28" [id = "E38"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N8" -> "N54" [id = "E45"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N30" -> "N32" [id = "E20"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N30" -> "N31" [id = "E19"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N53" -> "N28" [id = "E48"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N29" -> "N30" [id = "E18"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N18" -> "N19" [id = "E6"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N19" -> "N7" [id = "E3"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N53" -> "N18" [id = "E46"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N46" -> "N59" [id = "E36"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N54" -> "N18" [id = "E31"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N28" -> "N34" [id = "E24"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N28" -> "N46" [id = "E42"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N28" -> "N29" [id = "E17"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N6" -> "N33" [id = "E14"
+,weight = "2"
+,penwidth = "2"
+];
+
+"N5" -> "N53" [id = "E52"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N19" -> "N14" [id = "E4"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N35" -> "N36" [id = "E26"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N6" -> "N9" [id = "E15"
+,weight = "2"
+,penwidth = "2"
+];
+
+"N4" -> "N53" [id = "E53"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N45" -> "N46" [id = "E34"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N59" -> "N6" [id = "E12"
+,weight = "2"
+,penwidth = "2"
+];
+
+"N2" -> "N34" [id = "E11"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N12" -> "N54" [id = "E57"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N48" -> "N51" [id = "E21"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N19" -> "N20" [id = "E7"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N19" -> "N21" [id = "E8"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N54" -> "N45" [id = "E32"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+"N2" -> "N18" [id = "E5"
+,weight = "2"
+,penwidth = "2"
+,"color" = "#a0a0a4"
+];
+
+
+}

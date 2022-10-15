@@ -1,0 +1,424 @@
+digraph "space_tug_v4"
+{
+
+bgcolor = "#ffffff"
+
+node [
+class = "node"
+,fillcolor = "#ff00ff",style = "filled"
+,width = "0.152778",height = "0.152778"
+,shape = "ellipse"
+,color = "#000000"
+,penwidth = "1"
+,"_vis_" = "id|label"
+];
+
+
+"N38" [
+pos = "-16.3194,-2.43056!"
+,xlabel = "analog_sun_sensors"
+]
+
+"N22" [
+pos = "-6.25,-2.43056!"
+,xlabel = "OR"
+]
+
+"N7" [
+pos = "-39.9306,-3.81944!"
+,xlabel = "thruster_4"
+]
+
+"N28" [
+pos = "-28.4722,3.125!"
+,xlabel = "kalman_filter"
+]
+
+"N52" [
+pos = "-8.68056,-3.81944!"
+,xlabel = "time_from_ground"
+]
+
+"N4" [
+pos = "-42.7083,-3.81944!"
+,xlabel = "thruster_2"
+]
+
+"N37" [
+pos = "-23.2639,-2.43056!"
+,xlabel = "digital_sun_sensors"
+]
+
+"N1" [
+pos = "-39.2361,0.347222!"
+,xlabel = "rcs"
+]
+
+"N2" [
+pos = "-42.0139,-2.43056!"
+,xlabel = "rcs_assembly_1"
+]
+
+"N35" [
+pos = "-19.7917,0.347222!"
+,xlabel = "sun_vector"
+]
+
+"N55" [
+pos = "-12.1528,-3.81944!"
+,xlabel = "gps_time"
+]
+
+"N54" [
+pos = "-19.0972,4.51389!"
+]
+
+"N48" [
+pos = "-10.4167,-1.04167!"
+,xlabel = "OR"
+]
+
+"N5" [
+pos = "-25.6944,5.90278!"
+,xlabel = "NADIR"
+]
+
+"N15" [
+pos = "-36.4583,-2.43056!"
+,xlabel = "rcs_assembly_2"
+]
+
+"N27" [
+pos = "-34.375,-3.81944!"
+,xlabel = "thruster_8"
+]
+
+"N40" [
+pos = "-23.2639,-3.81944!"
+,xlabel = "digital_sun_sensor_2"
+]
+
+"N9" [
+pos = "-19.0972,5.90278!"
+,xlabel = "TARGET"
+]
+
+"N13" [
+pos = "-22.2222,5.90278!"
+,xlabel = "INERT"
+]
+
+"N6" [
+pos = "-41.3194,-3.81944!"
+,xlabel = "thruster_3"
+]
+
+"N24" [
+pos = "-32.2917,-3.81944!"
+,xlabel = "fog"
+]
+
+"N49" [
+pos = "-5.20833,-3.81944!"
+,xlabel = "orbit_data_from_ground"
+]
+
+"N25" [
+pos = "-37.1528,-3.81944!"
+,xlabel = "thruster_6"
+]
+
+"N18" [
+pos = "-29.8611,5.90278!"
+,xlabel = "DETUMB_RCS"
+]
+
+"N46" [
+pos = "-9.375,0.347222!"
+,xlabel = "orbit_propagator"
+]
+
+"N51" [
+pos = "-10.7639,-3.81944!"
+,xlabel = "realtime_clock"
+]
+
+"N16" [
+pos = "-27.0833,5.90278!"
+,xlabel = "THOMSON_RCS"
+]
+
+"N14" [
+pos = "-39.2361,-1.04167!"
+,xlabel = "OR"
+]
+
+"N21" [
+pos = "-32.2917,-1.04167!"
+,xlabel = "gyro"
+]
+
+"N42" [
+pos = "-13.8889,-3.81944!"
+,xlabel = "analog_sun_sensor_3"
+]
+
+"N50" [
+pos = "-9.72222,-2.43056!"
+,xlabel = "rtc_ok"
+]
+
+"N3" [
+pos = "-44.0972,-3.81944!"
+,xlabel = "thruster_1"
+]
+
+"N31" [
+pos = "-29.1667,-3.81944!"
+,xlabel = "star_tracker_1"
+]
+
+"N36" [
+pos = "-19.7917,-1.04167!"
+,xlabel = "OR"
+]
+
+"N47" [
+pos = "-7.29167,-3.81944!"
+,xlabel = "gps_fix"
+]
+
+"N34" [
+pos = "-16.3194,-3.81944!"
+,xlabel = "analog_sun_sensor_2"
+]
+
+"N17" [
+pos = "-28.4722,5.90278!"
+,xlabel = "SUN_RCS"
+]
+
+"N32" [
+pos = "-27.7778,-3.81944!"
+,xlabel = "star_tracker_2"
+]
+
+"N39" [
+pos = "-25.3472,-3.81944!"
+,xlabel = "digital_sun_sensor_1"
+]
+
+"N30" [
+pos = "-28.4722,-2.43056!"
+,xlabel = "OR"
+]
+
+"N19" [
+pos = "-17.0139,5.90278!"
+,xlabel = "IDLE"
+]
+
+"N45" [
+pos = "-9.375,1.73611!"
+,xlabel = "guidance_module"
+]
+
+"N41" [
+pos = "-21.1806,-3.81944!"
+,xlabel = "digital_sun_sensor_3"
+]
+
+"N29" [
+pos = "-28.4722,-1.04167!"
+,xlabel = "star_tracker"
+]
+
+"N53" [
+pos = "-25.6944,4.51389!"
+]
+
+"N26" [
+pos = "-35.7639,-3.81944!"
+,xlabel = "thruster_7"
+]
+
+"N23" [
+pos = "-38.5417,-3.81944!"
+,xlabel = "thruster_5"
+]
+
+"N33" [
+pos = "-18.75,-3.81944!"
+,xlabel = "analog_sun_sensor_1"
+]
+
+
+
+edge [
+class = "edge"
+,weight = "1"
+,penwidth = "1"
+,"_vis_" = "label"
+,"color" = "#a0a0a4"
+,"style" = "solid"
+];
+
+
+"N54" -> "N28" [id = "E55"
+];
+
+"N5" -> "N53" [id = "E52"
+];
+
+"N50" -> "N51" [id = "E40"
+];
+
+"N35" -> "N36" [id = "E22"
+];
+
+"N22" -> "N49" [id = "E37"
+];
+
+"N2" -> "N7" [id = "E6"
+];
+
+"N38" -> "N33" [id = "E28"
+];
+
+"N54" -> "N1" [id = "E31"
+];
+
+"N17" -> "N1" [id = "E12"
+];
+
+"N17" -> "N21" [id = "E43"
+];
+
+"N28" -> "N29" [id = "E17"
+];
+
+"N18" -> "N1" [id = "E11"
+];
+
+"N13" -> "N53" [id = "E51"
+];
+
+"N2" -> "N4" [id = "E4"
+];
+
+"N2" -> "N6" [id = "E5"
+];
+
+"N48" -> "N55" [id = "E63"
+];
+
+"N37" -> "N39" [id = "E25"
+];
+
+"N30" -> "N31" [id = "E19"
+];
+
+"N17" -> "N35" [id = "E14"
+];
+
+"N19" -> "N28" [id = "E38"
+];
+
+"N37" -> "N41" [id = "E27"
+];
+
+"N46" -> "N22" [id = "E47"
+];
+
+"N15" -> "N26" [id = "E58"
+];
+
+"N15" -> "N27" [id = "E59"
+];
+
+"N36" -> "N37" [id = "E23"
+];
+
+"N45" -> "N46" [id = "E34"
+];
+
+"N30" -> "N32" [id = "E20"
+];
+
+"N50" -> "N52" [id = "E41"
+];
+
+"N46" -> "N48" [id = "E36"
+];
+
+"N37" -> "N40" [id = "E26"
+];
+
+"N15" -> "N23" [id = "E53"
+];
+
+"N16" -> "N53" [id = "E9"
+];
+
+"N54" -> "N45" [id = "E32"
+];
+
+"N15" -> "N25" [id = "E54"
+];
+
+"N22" -> "N47" [id = "E35"
+];
+
+"N14" -> "N15" [id = "E8"
+];
+
+"N9" -> "N54" [id = "E15"
+];
+
+"N38" -> "N34" [id = "E29"
+];
+
+"N28" -> "N21" [id = "E10"
+];
+
+"N53" -> "N1" [id = "E1"
+];
+
+"N38" -> "N42" [id = "E30"
+];
+
+"N48" -> "N50" [id = "E39"
+];
+
+"N18" -> "N21" [id = "E44"
+];
+
+"N29" -> "N30" [id = "E18"
+];
+
+"N36" -> "N38" [id = "E24"
+];
+
+"N28" -> "N46" [id = "E42"
+];
+
+"N53" -> "N28" [id = "E48"
+];
+
+"N28" -> "N35" [id = "E21"
+];
+
+"N14" -> "N2" [id = "E7"
+];
+
+"N1" -> "N14" [id = "E2"
+];
+
+"N2" -> "N3" [id = "E3"
+];
+
+"N21" -> "N24" [id = "E13"
+];
+
+
+}
