@@ -1,3 +1,11 @@
 strategy_*.prism
-prism/*
+prism/
+temp/
+recovery_*/
+decision_trees/
+benchmark.html
+benchmark.json
+.idea/
+src/__pycache__/
 src/graph_analysis/__pycache__/
+

@@ -27,7 +27,7 @@ all_equipment = sorted([get_node_name(G, node) for node in find_leaf_nodes(G, la
 (unique_graph_list, unique_node_lists, leaf_name_lists) = create_graph_list(G, verbose=False)
 
 start_time = time.time()
-verbose = True
+verbose = False
 directory_name = directory + "/recovery_" + filename.split('/')[-1].split('.')[0] + "/"
 if os.path.exists(directory_name):
     shutil.rmtree(directory_name)
@@ -47,7 +47,7 @@ generate_mode_switcher(get_mode_indices(G), get_mode_indices_appended(G),
                        directory_name + mode_switcher_filename)
 
 print("Model-checking with PRISM")
-prism_path = directory + "/../../prism/bin/prism"
+prism_path = directory + "/../../prism/prism/bin/prism"
 mode_switcher_strategy_filename = "strategy_" + mode_switcher_filename
 mode_switcher_properties_filename = "mode_switcher" + ".props"
 command = run_prism(prism_path, directory_name + mode_switcher_filename,

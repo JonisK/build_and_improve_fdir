@@ -420,7 +420,10 @@ class MainWindow(Gtk.Window):
         self.terminal_notebook.set_current_page(0)
         self.prune_graph(button)
         self.feed_input(f'\n')
-        generate_config_json_isolation(self.all_equipment, self.directory + "/../../temp/prism_strategy_config.json")
+        generate_config_json_isolation(
+            self.all_equipment,
+            self.directory + "/../../temp/",
+            self.directory + "/../../temp/prism_strategy_config.json")
         strategy_name = 'temp/prism_strategy.prism'
         self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
 
