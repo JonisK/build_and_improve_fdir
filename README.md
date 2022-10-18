@@ -13,7 +13,7 @@ clone the repository, navigate to its root and execute the install script:
 launch the gui via Python 3.8:
 ```
 cd src
-python3.8 analysis_tool_gui
+python3.8 analysis_tool_gui.py
 ```
 
 ## Contact

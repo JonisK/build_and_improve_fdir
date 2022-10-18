@@ -460,6 +460,7 @@ class MainWindow(Gtk.Window):
         self.scroll_down2()
 
     def build_recovery(self, button):
+        self.button_build_recovery.set_sensitive(False)
         self.terminal_notebook.set_current_page(0)
         self.feed_input(f"python3 src/build_recovery.py {self.directory} {self.filename}\n")
         # start_time = time.time()
