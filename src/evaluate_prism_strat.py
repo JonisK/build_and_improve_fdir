@@ -69,7 +69,7 @@ def export_state_values(statistics, prism_state_to_state_mapping):
 
 
 def evaluate_prism_strategy(statistics, prism_state_to_state_mapping):
-    command = './prism/prism/bin/prism ./temp/model.prism ./temp/model.props -prop 1 -explicit -exportstrat ' \
+    command = './prism/bin/prism ./temp/model.prism ./temp/model.props -prop 1 -explicit -exportstrat ' \
               './temp/prism_strategy.prism -exportstates ./temp/prism_strategy_states.prism -javamaxmem 4g > ' \
               './temp/prism_output.txt '
     os.system(command)
