@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.9
 
 import time
 import sys
@@ -6,13 +6,15 @@ import os
 import shutil
 import networkx as nx
 import pydot
-from graph_analysis.graph_analysis import create_graph_list, get_layers, get_node_name, find_leaf_nodes, get_mode_indices, get_mode_indices_appended
+from graph_analysis.graph_analysis import create_graph_list, get_layers, \
+    get_node_name, find_leaf_nodes, find_isolated_nodes, get_mode_indices, \
+    get_mode_indices_appended
 from graph_analysis.generate_available_modes import generate_available_modes
 from graph_analysis.generate_mode_switcher import generate_mode_switcher
-from graph_analysis.generate_config_json import generate_config_json, generate_config_json_isolation
+from graph_analysis.generate_config_json import generate_config_json
 from graph_analysis.run_prism import run_prism
 from graph_analysis.run_dtcontrol import run_dtcontrol
-from graph_analysis.generate_actions_list import create_actions_list, generate_actions_list
+from graph_analysis.generate_actions_list import create_actions_list
 from graph_analysis.generate_reconfigure import generate_reconfigure
 
 directory = sys.argv[1]
@@ -21,6 +23,13 @@ filename = sys.argv[2]
 graphs = pydot.graph_from_dot_file(filename)
 graph = graphs[0]
 G = nx.DiGraph(nx.nx_pydot.from_pydot(graph))
+if len(find_isolated_nodes(G)) > 0:
+    print(
+        f"Found {len(find_isolated_nodes(G))} isolated nodes: {find_isolated_nodes(G)}. Removing them.")
+    for node in find_isolated_nodes(G):
+        G.remove_node(node)
+else:
+    print(f"No isolated nodes found")
 
 layers = get_layers(G)
 all_equipment = sorted([get_node_name(G, node) for node in find_leaf_nodes(G, layers)])

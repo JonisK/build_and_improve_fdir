@@ -13,7 +13,8 @@ clone the repository, navigate to its root and execute the install script:
 launch the gui via the virtual environment that install.sh created:
 ```
 source python3.9-venv/bin/activate
-python3 src/analysis_tool_gui.py
+cd src
+python3 analysis_tool_gui.py
 ```
 
 ## Contact
