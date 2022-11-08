@@ -1,52 +1,44 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3.9
 #
-# Copyright 2008 Jose Fonseca
+# Copyright (c) 2022 Jonis Kiesbye, Kush Grove
 #
-# This program is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Lesser General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
+from graph_analysis.generate_config_json import generate_config_json_isolation
+from graph_analysis.graph_analysis import create_graph_list, get_layers, \
+    get_node_name, find_root_nodes, find_leaf_nodes, check_isolability, \
+    check_recoverability, get_root_node_names, examine_successor, \
+    get_node_id, find_isolated_nodes
+import pydot
+import networkx as nx
+import xdot
+import re
+import textwrap
+import logging
 import os
-import shutil
 
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Vte', '2.91')
-from gi.repository import Gtk, GObject, Vte
 from gi.repository import GLib
+from gi.repository import Gtk, Vte
 
-import time
-import logging
-import textwrap
-
-# import sys
-# print(sys.path)
-#sys.path.insert(0, './xdot.py/')
-#sys.path.append('..')
-# print(sys.path)
-import xdot
-#from implementation.src import mcts
-import networkx as nx
-import pydot
-
-from graph_analysis.graph_analysis import create_graph_list, get_layers, get_node_name, find_root_nodes, find_leaf_nodes, check_isolability, check_recoverability, get_root_node_names, examine_successor, get_mode_indices, get_mode_indices_appended
-from graph_analysis.generate_available_modes import generate_available_modes
-from graph_analysis.generate_mode_switcher import generate_mode_switcher
-from graph_analysis.generate_config_json import generate_config_json, generate_config_json_isolation
-from graph_analysis.run_prism import run_prism
-from graph_analysis.run_dtcontrol import run_dtcontrol
-from graph_analysis.generate_actions_list import create_actions_list, generate_actions_list
-from graph_analysis.generate_reconfigure import generate_reconfigure
 
 class MyHandler(logging.Handler):
     def __init__(self, log_output):
@@ -69,6 +61,7 @@ class MainWindow(Gtk.Window):
         self.filename = ""
         self.filename_fault_probs = ""
         self.filename_mode_costs = ""
+        self.filename_initial_state = ""
         self.G = None
 
         self.analysis_done = False
@@ -87,14 +80,12 @@ class MainWindow(Gtk.Window):
         self.set_border_width(10)
         paned = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
         paned.set_position(600)
-        # paned.set_wide_handle(True)
         self.add(paned)
 
         grid = Gtk.Grid()
         grid.set_column_spacing(10)
         grid.set_row_spacing(10)
         grid.set_column_homogeneous(True)
-        # grid.set_row_homogeneous(True)
 
         self.button_import = Gtk.Button(label="Import Graph")
         self.button_import.connect("clicked", self.on_open)
@@ -113,16 +104,21 @@ class MainWindow(Gtk.Window):
             + f" - ? to ? configurations per mode\n")
         grid.attach(self.graph_stats, 0, 2, 2, 1)
 
-        self.children_to_keep_label = Gtk.Label(label="Actions to keep: ")
-        grid.attach(self.children_to_keep_label, 0, 3, 1, 1)
+        self.number_of_faults_label = Gtk.Label(label="Number of faults: ")
+        grid.attach(self.number_of_faults_label, 0, 3, 1, 1)
+        self.number_of_faults_entry = Gtk.Entry()
+        self.number_of_faults_entry.set_text("1")
+        self.number_of_faults_entry.connect("activate", self.reset_check_buttons)
+        grid.attach_next_to(self.number_of_faults_entry, self.number_of_faults_label, Gtk.PositionType.RIGHT, 1, 1)
 
+        self.children_to_keep_label = Gtk.Label(label="Actions to keep: ")
+        grid.attach(self.children_to_keep_label, 0, 4, 1, 1)
         self.children_to_keep_entry = Gtk.Entry()
         self.children_to_keep_entry.set_text("2")
         grid.attach_next_to(self.children_to_keep_entry, self.children_to_keep_label, Gtk.PositionType.RIGHT, 1, 1)
 
         self.simulations_per_node_label = Gtk.Label(label="Simulations per node: ")
-        grid.attach(self.simulations_per_node_label, 0, 4, 1, 1)
-
+        grid.attach(self.simulations_per_node_label, 0, 5, 1, 1)
         self.simulations_per_node_entry = Gtk.Entry()
         self.simulations_per_node_entry.set_text("10")
         grid.attach_next_to(self.simulations_per_node_entry, self.simulations_per_node_label, Gtk.PositionType.RIGHT, 1, 1)
@@ -138,8 +134,8 @@ class MainWindow(Gtk.Window):
         self.isolation_info = Gtk.Label()
         self.isolation_info.set_xalign(0)  # left-aligned
         self.isolation_info.set_markup("<b><big>Isolation info</big></b>\n"
-                                  + " - ? components can be isolated\n"
-                                  + " - ? components cannot be isolated\n")
+                                       + " - ? components can be isolated\n"
+                                       + " - ? components cannot be isolated\n")
         grid.attach(self.isolation_info, 0, 7, 2, 1)
 
         self.button_check_recovery = Gtk.Button(label="Check Recovery")
@@ -153,14 +149,13 @@ class MainWindow(Gtk.Window):
         self.recovery_info = Gtk.Label()
         self.recovery_info.set_xalign(0)  # left-aligned
         self.recovery_info.set_markup("<b><big>Recovery info</big></b>\n"
-                                 + " - ? modes are fault-tolerant\n"
-                                 + " - ? modes are not fault-tolerant\n")
+                                      + " - ? modes are fault-tolerant\n"
+                                      + " - ? modes are not fault-tolerant\n")
         grid.attach(self.recovery_info, 0, 9, 2, 1)
 
         self.notebook = Gtk.Notebook()
         # First page, xdot view of the graph
         self.page1 = xdot.DotWidget()
-        # self.page1.set_dotcode(dotcode)
         self.notebook.append_page(child=self.page1, tab_label=Gtk.Label(label='Show graph'))
 
         # Second page, enter fault probabilities
@@ -203,7 +198,7 @@ class MainWindow(Gtk.Window):
 
         self.notebook.append_page(child=self.page3, tab_label=Gtk.Label(label='Mode Costs'))
 
-        # Fourth page
+        # Fourth page, show weakness report
         self.page4 = Gtk.Box()
         self.page4.set_border_width(10)
         self.report_text = Gtk.TextView()
@@ -216,6 +211,35 @@ class MainWindow(Gtk.Window):
         report_scroller.add(self.report_text)
         self.page4.add(report_scroller)
         self.notebook.append_page(child=self.page4, tab_label=Gtk.Label(label='Weakness Report'))
+
+        # Fifth page, enter equipment state
+        self.page5 = Gtk.Box()
+        self.page5.set_border_width(10)
+
+        self.grid = Gtk.Grid()
+        self.grid.set_column_homogeneous(True)
+        self.grid.set_row_homogeneous(True)
+        self.page5.add(self.grid)
+
+        self.states_liststore = Gtk.ListStore(str)
+        self.states_liststore.append(['suspicious'])
+        self.states_liststore.append(['available'])
+
+        self.initialize_liststore(self.all_equipment)
+        self.scrollable_treelist = self.initialize_treelist(self.states_liststore,
+                                                            self.on_combo_changed)
+        self.grid.attach(self.scrollable_treelist, 0, 0, 4, 9)
+
+        # export button
+        export_button = Gtk.Button(label="Export")
+        export_button.connect("clicked", self.export_action)
+        self.grid.attach(export_button, 0, 9, 1, 1)
+
+        # build isolation per state button
+        build_isolation_per_state_button = Gtk.Button(label="Build")
+        # build_isolation_per_state_button.connect("clicked", self.prune_graph_with_initial_state)
+        self.grid.attach_next_to(build_isolation_per_state_button, export_button, Gtk.PositionType.RIGHT, 1, 1)
+        self.notebook.append_page(child=self.page5, tab_label=Gtk.Label(label='Enter State'))
 
         grid.attach(self.notebook, 2, 1, 5, 9)
         paned.add1(grid)
@@ -238,18 +262,8 @@ class MainWindow(Gtk.Window):
             None,
             self.ready
         )
-        # self.pty.spawn_async(
-        #     self.directory,
-        #     ["/bin/python3"],
-        #     None,
-        #     GLib.SpawnFlags.DO_NOT_REAP_CHILD,
-        #     None,
-        #     None,
-        #     -1,
-        #     None,
-        #     self.ready
-        # )
         self.terminal.set_cursor_blink_mode(Vte.CursorBlinkMode.OFF)
+
         # a scroll window is required for the terminal
         self.scroller = Gtk.ScrolledWindow()
         self.scroller.set_hexpand(True)
@@ -261,7 +275,6 @@ class MainWindow(Gtk.Window):
         # Python Log
         self.log_output = Gtk.TextView()
         self.log_output.set_editable(False)
-        # self.log_output.connect('size-allocate', self.scroll_down)
 
         self.log_scroller = Gtk.ScrolledWindow()
         # self.log_scroller.connect('size-allocate', self.scroll_down)
@@ -271,7 +284,6 @@ class MainWindow(Gtk.Window):
 
         self.terminal_notebook.append_page(child=self.log_scroller, tab_label=Gtk.Label(label='Log'))
 
-        # grid.attach(self.terminal_notebook, 0, 10, 7, 5)
         paned.add2(self.terminal_notebook)
 
     def on_analyze(self, action):
@@ -306,6 +318,7 @@ class MainWindow(Gtk.Window):
             chooser.destroy()
             self.filename_fault_probs = self.filename.split(".")[0] + "_fault_probabilities.txt"
             self.filename_mode_costs = self.filename.split(".")[0] + "_mode_costs.txt"
+            self.filename_initial_state = self.filename.split(".")[0] + "_initial_state.txt"
 
             # Reset buttons
             self.button_analyze.set_sensitive(True)
@@ -326,6 +339,7 @@ class MainWindow(Gtk.Window):
             self.get_graph_stats_initial(self.filename, self.G)
             self.read_probabilities()
             self.read_costs()
+            self.update_enter_state(self.all_equipment)
         else:
             chooser.destroy()
 
@@ -347,13 +361,17 @@ class MainWindow(Gtk.Window):
         graphs = pydot.graph_from_dot_file(filename)
         graph = graphs[0]
         self.G = nx.DiGraph(nx.nx_pydot.from_pydot(graph))
+        if len(find_isolated_nodes(self.G)) > 0:
+            logging.warning(
+                f"Found {len(find_isolated_nodes(self.G))} isolated nodes: {find_isolated_nodes(self.G)}. Removing them.")
+            for node in find_isolated_nodes(self.G):
+                self.G.remove_node(node)
+        else:
+            logging.info(f"No isolated nodes found")
 
         layers = get_layers(self.G)
         self.all_equipment = sorted([get_node_name(self.G, node) for node in find_leaf_nodes(self.G, layers)])
-        all_equipment_set = set(self.all_equipment)
         logging.info(f"All equipment: {[(index, component) for index, component in enumerate(self.all_equipment)]}")
-        # logging.info(f"Configuration: {get_configuration(G, all_equipment)}")
-        # logging.info(f"Configuration dict: {get_configuration_dict(G, all_equipment)}")
         self.scroll_down2()
 
     def get_graph_stats_filename(self, filename):
@@ -381,15 +399,8 @@ class MainWindow(Gtk.Window):
             + f" - {min(num_configs)} to {max(num_configs)} configurations per mode\n")
 
     def analyze_graph(self, G):
-        layers = get_layers(G)
-        self.all_equipment = sorted([get_node_name(G, node) for node in find_leaf_nodes(G, layers)])
-        all_equipment_set = set(self.all_equipment)
-        logging.info(f"All equipment: {[(index, component) for index, component in enumerate(self.all_equipment)]}")
-        # logging.info(f"Configuration: {get_configuration(G, all_equipment)}")
-        # logging.info(f"Configuration dict: {get_configuration_dict(G, all_equipment)}")
-
         logging.info("Analyze the configuration graph")
-        (self.unique_graph_list, unique_node_lists, self.leaf_name_lists) = create_graph_list(G, verbose=False)
+        (self.unique_graph_list, unique_node_lists, self.leaf_name_lists) = create_graph_list(G, verbose=True)
 
         # set button states
         self.button_check_isolation.set_sensitive(True)
@@ -400,11 +411,16 @@ class MainWindow(Gtk.Window):
         self.get_report()
         self.scroll_down2()
 
+    def reset_check_buttons(self, widget):
+        if self.analysis_done:
+            self.button_check_isolation.set_sensitive(True)
+            self.button_check_recovery.set_sensitive(True)
+
     def check_isolation(self, button):
         self.button_check_isolation.set_sensitive(False)
         self.terminal_notebook.set_current_page(1)
         logging.info("Checking isolation")
-        self.non_isolable = check_isolability(self.all_equipment, self.leaf_name_lists)
+        self.non_isolable = check_isolability(self.all_equipment, self.leaf_name_lists, int(self.number_of_faults_entry.get_text()))
         self.num_non_isolable = len(self.non_isolable)
         num_isolable = len(self.all_equipment) - self.num_non_isolable
         self.isolation_info.set_markup(
@@ -431,9 +447,24 @@ class MainWindow(Gtk.Window):
         self.feed_input(
             f'python3 src/mcts.py --modecosts {self.filename_mode_costs} --equipfailprobs {self.filename_fault_probs} --successorstokeep {self.children_to_keep_entry.get_text()} --simulationsize {self.simulations_per_node_entry.get_text()} {self.filename}\n')
 
+    # def prune_graph_with_initial_state(self, button):
+    #     self.terminal_notebook.set_current_page(1)
+    #
+    #     configuration_lists = get_configuration_lists(self.leaf_name_lists, self.all_equipment)
+    #
+    #     strategy_filename = self.directory + "/../../temp/strategy_initial.prism"
+    #     states_filename = self.directory + "/../../temp/strategy_initial_states.prism"
+    #     writer = StrategyWriter(states_filename, strategy_filename)
+    #     writer.write_header(self.all_equipment)
+    #
+    #     equipment_state = [1 if self.equipment_liststore[state][1] == "available" else 0 \
+    #                        for state in range(len(self.all_equipment))]
+    #
+    #     traverse_binary_tree_weights(self.G, configuration_lists, equipment_state, self.get_costs(), writer, verbose=False)
+    #     writer.close()
+
     def ready(self, pty, task):
         pass
-        # print('pty ', pty)
 
     def feed_input(self, text):
         text = bytearray(text, "utf-8")
@@ -463,48 +494,6 @@ class MainWindow(Gtk.Window):
         self.button_build_recovery.set_sensitive(False)
         self.terminal_notebook.set_current_page(0)
         self.feed_input(f"python3 src/build_recovery.py {self.directory} {self.filename}\n")
-        # start_time = time.time()
-        # verbose = True
-        # directory_name = self.directory + "/recovery_" + self.filename.split('/')[-1].split('.')[0] + "/"
-        # if os.path.exists(directory_name):
-        #     shutil.rmtree(directory_name)
-        # os.makedirs(directory_name)
-        # available_modes_filename = "available_modes.c"
-        # print("Generate " + available_modes_filename)
-        # generate_available_modes(self.G, self.unique_graph_list, directory_name + available_modes_filename, verbose)
-        #
-        # mode_switcher_filename = "mode_switcher.prism"
-        # print("Generate " + mode_switcher_filename)
-        # with open(directory_name + "mode_switcher.props", "w") as text_file:
-        #     print('Pmax=? [ F "mode_selected" ]\n', file=text_file)
-        # generate_mode_switcher(get_mode_indices(self.G), get_mode_indices_appended(self.G), directory_name + mode_switcher_filename)
-        #
-        # print("Model-checking with PRISM")
-        # self.terminal_notebook.set_current_page(0)
-        # prism_path = self.directory + "/prism/bin/prism"
-        # mode_switcher_strategy_filename = "strategy_" + mode_switcher_filename
-        # mode_switcher_properties_filename = "mode_switcher" + ".props"
-        # command = run_prism(prism_path, directory_name + mode_switcher_filename, directory_name + mode_switcher_properties_filename,
-        #                     directory_name + mode_switcher_strategy_filename, verbose)
-        # self.feed_input(command)
-        #
-        # print("Generate config JSON")
-        # self.terminal_notebook.set_current_page(1)
-        # mode_switcher_config_filename = "strategy_" + mode_switcher_filename.split(".")[0] + "_config.json"
-        # generate_config_json(get_mode_indices(self.G), get_mode_indices_appended(self.G), directory_name + mode_switcher_config_filename)
-        #
-        # print("Run dtControl and move decision tree")
-        # self.terminal_notebook.set_current_page(0)
-        # command = run_dtcontrol(directory_name + mode_switcher_strategy_filename, verbose)
-        # self.feed_input(command)
-        #
-        # self.terminal_notebook.set_current_page(1)
-        # reconfigure_filename = "reconfigure.c"
-        # print("Generate " + reconfigure_filename)
-        # actions_list = create_actions_list(directory_name + mode_switcher_strategy_filename)
-        # print(actions_list)
-        # generate_reconfigure(self.G, actions_list, get_mode_indices(self.G), get_mode_indices_appended(self.G), directory_name + reconfigure_filename)
-        # print("This configuration took " + str(time.time() - start_time) + "s")
 
     def read_probabilities(self):
         try:
@@ -530,8 +519,8 @@ class MainWindow(Gtk.Window):
 
     def get_probabilities(self):
         probabilities_text = self.fault_probabilities_text.get_buffer().get_text(
-                self.fault_probabilities_text.get_buffer().get_start_iter(),
-                self.fault_probabilities_text.get_buffer().get_end_iter(), False)
+            self.fault_probabilities_text.get_buffer().get_start_iter(),
+            self.fault_probabilities_text.get_buffer().get_end_iter(), False)
         return {line.split(":")[0]: float(line.split(":")[1]) for line in probabilities_text.split(",\n")}
 
     def read_costs(self):
@@ -544,6 +533,19 @@ class MainWindow(Gtk.Window):
             logging.warning(f"File {self.filename_mode_costs} doesn't exist yet")
         finally:
             self.mode_costs_text.get_buffer().set_text(file_content, len(file_content))
+
+    def get_costs(self):
+        mode_costs = {}
+        print(self.mode_costs_text.get_buffer().get_text(
+            self.mode_costs_text.get_buffer().get_start_iter(),
+            self.mode_costs_text.get_buffer().get_end_iter(), False))
+        for line in self.mode_costs_text.get_buffer().get_text(
+                self.mode_costs_text.get_buffer().get_start_iter(),
+                self.mode_costs_text.get_buffer().get_end_iter(), False).split("\n"):
+            print(line)
+            mode_costs[get_node_id(self.G, re.findall("\\w+(?=:)", line)[0])] = float(re.findall("\\d+.\\d+", line)[0])
+        print(mode_costs)
+        return mode_costs
 
     def generate_mode_costs(self):
         string_list = [mode + ": 0.0" for mode in get_root_node_names(self.G)]
@@ -605,9 +607,53 @@ class MainWindow(Gtk.Window):
         end_iter = self.report_text.get_buffer().get_end_iter()
         self.report_text.get_buffer().insert_markup(end_iter, message, -1)
 
+    def initialize_liststore(self, all_equipment):
+        # Creating the ListStore model
+        self.equipment_liststore = Gtk.ListStore(str, str)
+        self.update_enter_state(all_equipment)
+
+    def update_enter_state(self, all_equipment):
+        self.equipment_liststore.clear()
+        for equipment in all_equipment:
+            self.equipment_liststore.append([equipment, "suspicious"])
+
+    def initialize_treelist(self, states_liststore, change_callback):
+        # creating the treeview and adding the columns
+        treeview = Gtk.TreeView(model=self.equipment_liststore)
+        for i, column_title in enumerate(["Equipment"]):
+            renderer = Gtk.CellRendererText()
+            column = Gtk.TreeViewColumn(column_title, renderer, text=i)
+            treeview.append_column(column)
+
+        cellrenderercombo = Gtk.CellRendererCombo(model=states_liststore)
+        cellrenderercombo.set_property("editable", True)
+        cellrenderercombo.set_property("has-entry", False)
+        cellrenderercombo.set_property('sensitive', True)
+        cellrenderercombo.set_property('mode', Gtk.CellRendererMode.EDITABLE)
+        cellrenderercombo.set_property('height', 25)
+        cellrenderercombo.set_property("model", states_liststore)
+        cellrenderercombo.set_property("text_column", 0)
+        cellrenderercombo.connect("changed", change_callback)
+        column = Gtk.TreeViewColumn("State", cellrenderercombo)
+        treeview.append_column(column)
+        column.add_attribute(cellrenderercombo, "text", 1)
+
+        # setting up the layout, putting the treeview in a scrollwindow, and the buttons in a row
+        scrollable_treelist = Gtk.ScrolledWindow()
+        scrollable_treelist.set_vexpand(True)
+        scrollable_treelist.add(treeview)
+        return scrollable_treelist
+
+    def on_combo_changed(self, cellrenderercombo, treepath, treeiter):
+        self.equipment_liststore[treepath][1] = self.states_liststore[treeiter][0]
+
+    def export_action(self, widget):
+        equipment_state = [self.equipment_liststore[state][1] for state in range(len(self.all_equipment))]
+        with open(self.filename_initial_state, 'w') as file_ref:
+            file_ref.write(equipment_state)
+
 
 def main():
-    # window = MyDotWindow()
     window = MainWindow()
     window.set_default_size(1500, 900)
     window.connect('delete-event', Gtk.main_quit)
@@ -617,12 +663,11 @@ def main():
         format="[%(levelname)s] %(funcName)s: %(message)s")
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    # self.logger = logging.getLogger("Example")
     handler = MyHandler(window.log_output)
-    # self.handler.setLevel(logging.INFO)
     logger.addHandler(handler)
 
     Gtk.main()
+
 
 if __name__ == '__main__':
     main()
