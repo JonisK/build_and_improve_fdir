@@ -47,7 +47,7 @@ generate_mode_switcher(get_mode_indices(G), get_mode_indices_appended(G),
                        directory_name + mode_switcher_filename)
 
 print("Model-checking with PRISM")
-prism_path = directory + "/../../prism/prism/bin/prism"
+prism_path = directory + "/../../prism/bin/prism"
 mode_switcher_strategy_filename = "strategy_" + mode_switcher_filename
 mode_switcher_properties_filename = "mode_switcher" + ".props"
 command = run_prism(prism_path, directory_name + mode_switcher_filename,
