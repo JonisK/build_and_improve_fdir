@@ -8,4 +8,6 @@ benchmark.json
 .idea/
 src/__pycache__/
 src/graph_analysis/__pycache__/
+python3.*-venv
+prism-*.tar.gz
 
