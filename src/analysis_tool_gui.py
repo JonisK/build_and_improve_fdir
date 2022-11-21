@@ -58,6 +58,7 @@ class MainWindow(Gtk.Window):
 
     def __init__(self):
         self.directory = os.getcwd() + "/../"
+        self.base_directory = os.getcwd() + "/../"
         self.filename = ""
         self.filename_fault_probs = ""
         self.filename_mode_costs = ""
@@ -241,6 +242,10 @@ class MainWindow(Gtk.Window):
         self.grid.attach_next_to(build_isolation_per_state_button, export_button, Gtk.PositionType.RIGHT, 1, 1)
         self.notebook.append_page(child=self.page5, tab_label=Gtk.Label(label='Enter State'))
 
+        # Sixth page, xdot view of the isolation graph
+        self.page6 = xdot.DotWidget()
+        self.notebook.append_page(child=self.page6, tab_label=Gtk.Label(label='Isolation graph'))
+
         grid.attach(self.notebook, 2, 1, 5, 9)
         paned.add1(grid)
 
@@ -252,7 +257,7 @@ class MainWindow(Gtk.Window):
         self.pty = Vte.Pty.new_sync(Vte.PtyFlags.DEFAULT)
         self.terminal.set_pty(self.pty)
         self.pty.spawn_async(
-            self.directory,
+            self.base_directory,
             ["/bin/sh"],
             None,
             GLib.SpawnFlags.DO_NOT_REAP_CHILD,
@@ -331,7 +336,7 @@ class MainWindow(Gtk.Window):
             self.check_isolability_done = False
             self.check_recoverability_done = False
 
-            self.open_file(self.filename)
+            self.open_file(self.filename, self.page1)
             self.page1.zoom_to_fit()
             self.get_graph_stats_filename(self.filename)
             self.import_graph(self.filename)
@@ -343,10 +348,10 @@ class MainWindow(Gtk.Window):
         else:
             chooser.destroy()
 
-    def open_file(self, filename):
+    def open_file(self, filename, page):
         try:
             fp = open(filename, 'rb')
-            self.page1.set_dotcode(fp.read(), filename)
+            page.set_dotcode(fp.read(), filename)
             fp.close()
         except IOError as ex:
             self.error_dialog(str(ex))
@@ -400,7 +405,7 @@ class MainWindow(Gtk.Window):
 
     def analyze_graph(self, G):
         logging.info("Analyze the configuration graph")
-        (self.unique_graph_list, unique_node_lists, self.leaf_name_lists) = create_graph_list(G, verbose=True)
+        (self.unique_graph_list, unique_node_lists, self.leaf_name_lists) = create_graph_list(G)
 
         # set button states
         self.button_check_isolation.set_sensitive(True)
@@ -438,15 +443,28 @@ class MainWindow(Gtk.Window):
         self.feed_input(f'\n')
         generate_config_json_isolation(
             self.all_equipment,
-            self.directory + "/../../temp/",
-            self.directory + "/../../temp/prism_strategy_config.json")
+            self.base_directory + "/temp/",
+            self.base_directory + "/temp/",
+ + "/temp/prism_strategy_config.json")
         strategy_name = 'temp/prism_strategy.prism'
         self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
 
     def prune_graph(self, button):
-        self.feed_input(
-            f'python3 src/mcts.py --modecosts {self.filename_mode_costs} --equipfailprobs {self.filename_fault_probs} --successorstokeep {self.children_to_keep_entry.get_text()} --simulationsize {self.simulations_per_node_entry.get_text()} {self.filename}\n')
+        self.feed_input(f'python3 src/mcts.py '
+            f'--modecosts {self.filename_mode_costs} '
+            f'--equipfailprobs {self.filename_fault_probs} '
+            f'--successorstokeep {self.children_to_keep_entry.get_text()} '
+            f'--simulationsize {self.simulations_per_node_entry.get_text()} '
+            f'{self.filename}\n')
 
+    def prune_graph_with_initial_state(self, button):
+        self.feed_input(f'python3 src/mcts.py '
+            f'--modecosts {self.filename_mode_costs} '
+            f'--equipfailprobs {self.filename_fault_probs} '
+            f'--successorstokeep {self.children_to_keep_entry.get_text()} '
+            f'--simulationsize {self.simulations_per_node_entry.get_text()} '
+            f'{self.filename}\n')
+        self.open_file(self.filename, self.page6)
     # def prune_graph_with_initial_state(self, button):
     #     self.terminal_notebook.set_current_page(1)
     #
@@ -479,7 +497,10 @@ class MainWindow(Gtk.Window):
         self.button_check_recovery.set_sensitive(False)
         self.terminal_notebook.set_current_page(1)
         logging.info("Checking recovery")
-        self.non_recoverable = check_recoverability(self.G, self.all_equipment, self.leaf_name_lists)
+        self.non_recoverable = check_recoverability(self.G,
+                                                    self.all_equipment,
+                                                    self.leaf_name_lists,
+                                                    int(self.number_of_faults_entry.get_text()))
         self.num_non_recoverable = len(self.non_recoverable)
         num_recoverable = len(self.leaf_name_lists) - self.num_non_recoverable
         self.recovery_info.set_markup(
@@ -493,7 +514,7 @@ class MainWindow(Gtk.Window):
     def build_recovery(self, button):
         self.button_build_recovery.set_sensitive(False)
         self.terminal_notebook.set_current_page(0)
-        self.feed_input(f"python3 src/build_recovery.py {self.directory} {self.filename}\n")
+        self.feed_input(f"python3 src/build_recovery.py {self.base_directory} {self.directory} {self.filename}\n")
 
     def read_probabilities(self):
         try:
@@ -650,7 +671,7 @@ class MainWindow(Gtk.Window):
     def export_action(self, widget):
         equipment_state = [self.equipment_liststore[state][1] for state in range(len(self.all_equipment))]
         with open(self.filename_initial_state, 'w') as file_ref:
-            file_ref.write(equipment_state)
+            file_ref.write(str(equipment_state))
 
 
 def main():
@@ -664,7 +685,7 @@ def main():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     handler = MyHandler(window.log_output)
-    logger.addHandler(handler)
+    #logger.addHandler(handler)
 
     Gtk.main()
 

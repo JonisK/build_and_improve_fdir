@@ -17,8 +17,9 @@ from graph_analysis.run_dtcontrol import run_dtcontrol
 from graph_analysis.generate_actions_list import create_actions_list
 from graph_analysis.generate_reconfigure import generate_reconfigure
 
-directory = sys.argv[1]
-filename = sys.argv[2]
+base_directory = sys.argv[1]
+directory = sys.argv[2]
+filename = sys.argv[3]
 
 graphs = pydot.graph_from_dot_file(filename)
 graph = graphs[0]
@@ -33,7 +34,7 @@ else:
 
 layers = get_layers(G)
 all_equipment = sorted([get_node_name(G, node) for node in find_leaf_nodes(G, layers)])
-(unique_graph_list, unique_node_lists, leaf_name_lists) = create_graph_list(G, verbose=False)
+(unique_graph_list, unique_node_lists, leaf_name_lists) = create_graph_list(G)
 
 start_time = time.time()
 verbose = False
@@ -56,7 +57,7 @@ generate_mode_switcher(get_mode_indices(G), get_mode_indices_appended(G),
                        directory_name + mode_switcher_filename)
 
 print("Model-checking with PRISM")
-prism_path = directory + "/../../prism/bin/prism"
+prism_path = base_directory + "/prism/bin/prism"
 mode_switcher_strategy_filename = "strategy_" + mode_switcher_filename
 mode_switcher_properties_filename = "mode_switcher" + ".props"
 command = run_prism(prism_path, directory_name + mode_switcher_filename,

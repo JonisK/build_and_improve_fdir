@@ -4,6 +4,8 @@ import networkx as nx
 import itertools
 import re
 import logging
+import concurrent.futures
+import time
 from functools import reduce
 from operator import mul
 
@@ -11,6 +13,34 @@ logging.basicConfig(
     format="[%(levelname)s] %(funcName)s: %(message)s")
 # logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger().setLevel(logging.INFO)
+
+
+class Permutation_Fetcher():
+    def __init__(self, all_permutations):
+        self.all_permutations = all_permutations
+        self.graph_list = []
+        self.node_lists = []
+        self.computed_permutations = 0
+
+    def add_permutation(self, graph, node_list):
+        self.graph_list.append(graph)
+        self.node_lists.append(node_list)
+        self.computed_permutations += 1
+        logging.info(f"[{self.computed_permutations}/{self.all_permutations}], "
+                     f"{self.computed_permutations / self.all_permutations:.1%}")
+
+    def add_dummy(self):
+        self.computed_permutations += 1
+
+    def get_permutations(self):
+        return self.computed_permutations
+
+    def get_done(self):
+        return self.computed_permutations == self.all_permutations
+
+    def get_graph_lists(self):
+        return self.graph_list, self.node_lists
+
 
 def find_root_nodes(G):
     root_nodes = []
@@ -23,7 +53,7 @@ def find_root_nodes(G):
 def find_isolated_nodes(G):
     isolated_nodes = []
     for node in G:
-        if len(list(G.predecessors(node))) == 0 and len(list(G.successors(node)))==0:
+        if len(list(G.predecessors(node))) == 0 and len(list(G.successors(node))) == 0:
             isolated_nodes.append(node)
     return isolated_nodes
 
@@ -111,7 +141,7 @@ def get_dependencies(G, root_node):
     return [get_node_name(G, dependency) for dependency in list(G.successors(root_node))]
 
 
-def create_statespace(G, node_list, verbose):
+def create_statespace(G, node_list):
     import re
     graph_list = []
     statespace = []
@@ -130,14 +160,14 @@ def create_statespace(G, node_list, verbose):
                 # the length should be equivalent to the binomial coefficient available nCr required
                 statespace.append(len(list(itertools.combinations(range(available), available - required))) + 1)
             elif name.startswith("OR"):
-                statespace.append(2)
+                statespace.append(len(list(G.successors(node))))
     # if there are no disjunctive assemblies, there is only one state
     if not statespace:
         statespace.append(1)
     return statespace
 
 
-def create_permutations(statespace, verbose):
+def create_permutations(statespace):
     permutations = []
     reversed_statespace = statespace
     reversed_statespace.reverse()
@@ -170,122 +200,210 @@ def create_permutations(statespace, verbose):
     return permutations
 
 
-def check_for_upstream_dependencies(G, nodes_to_be_deleted, root_node, predecessor, verbose):
+def predecessors_outside_removal_range(G, node, nodes_to_be_deleted):
+    for predecessor in G.predecessors(node):
+        if predecessor not in nodes_to_be_deleted:
+            return True
+    return False
+
+
+def check_for_upstream_dependencies(G, nodes_to_be_deleted, root_node, predecessor):
     try:
         for node in nodes_to_be_deleted:
-            logging.debug(
-                f"[{get_node_name(G, root_node)}] Check node {node} ({get_node_name(G, node)}) that is about to be deleted") if verbose else None
-            if len(list(G.predecessors(node))) > 1:
+            logging.debug((
+                f"[{get_node_name(G, root_node)}] Check node {node} ({get_node_name(G, node)}) "
+                f"that is about to be deleted"))
+            if len(list(G.predecessors(node))) > 1 and predecessors_outside_removal_range(G, node, nodes_to_be_deleted):
+                logging.debug((
+                    f"[{get_node_name(G, root_node)}] Node {node} ({get_node_name(G, node)}) "
+                    f"has {str(len(list(G.predecessors(node))))} predecessors and some of "
+                    f"them are outside the range of nodes we intend to delete"))
                 logging.debug(
-                    f"[{get_node_name(G, root_node)}] Node {node} ({get_node_name(G, node)}) has {str(len(list(G.predecessors(node))))} predecessors") if verbose else None
-                logging.debug(
-                    f"[{get_node_name(G, root_node)}] Therefore, we will not delete: {list(nx.bfs_tree(G, node, reverse=False))}") if verbose else None
-                logging.debug(
-                    f"[{get_node_name(G, root_node)}] But we will delete the edge from {predecessor} to the node(s) {list(nx.bfs_tree(G, node, reverse=False))}") if verbose else None
+                    f"[{get_node_name(G, root_node)}] Therefore, we will not delete: "
+                    f"{list(nx.bfs_tree(G, node, reverse=False))}")
+                logging.debug((
+                    f"[{get_node_name(G, root_node)}] But we will delete the edge from "
+                    f"{predecessor} to the node(s) {list(nx.bfs_tree(G, node, reverse=False))}"))
                 for node_to_keep in list(nx.bfs_tree(G, node, reverse=False)):
                     if node_to_keep in nodes_to_be_deleted:
                         nodes_to_be_deleted.remove(node_to_keep)
                         try:
                             G.remove_edge(predecessor, node_to_keep)
                         except:
-                            logging.warning(f"[{get_node_name(G, root_node)}] Could not delete edge. Skipping")
+                            logging.warning((
+                                f"[{get_node_name(G, root_node)}] Could not find edge from "
+                                f"{predecessor} ({get_node_name(G, predecessor)}) "
+                                f"to {node_to_keep} ({get_node_name(G, node_to_keep)}). Skipping"))
                     else:
-                        logging.debug(
-                            f"[{get_node_name(G, root_node)}] Node {node} ({get_node_name(G, node)}) is not about to be deleted. Skipping...")
-            elif len(list(G.predecessors(node))) == 0:
-                logging.warning(
-                    f"[{get_node_name(G, root_node)}] That's strange. Node {node} ({get_node_name(G, node)}) has no predecessors") if verbose else None
-            else:
+                        logging.debug((
+                            f"[{get_node_name(G, root_node)}] Node {node} ({get_node_name(G, node)}) "
+                            f"is not about to be deleted. Skipping..."))
+            elif len(list(G.predecessors(node))) > 1 and not predecessors_outside_removal_range(G, node,
+                                                                                                nodes_to_be_deleted):
+                logging.debug((
+                    f"[{get_node_name(G, root_node)}] Node {node} ({get_node_name(G, node)}) "
+                    f"has {str(len(list(G.predecessors(node))))} predecessors but they all "
+                    f"lie in the range of nodes we are about to delete"))
                 logging.debug(
-                    f"[{get_node_name(G, root_node)}] The node has just one predecessor and will be deleted") if verbose else None
-            logging.debug(
-                f"[{get_node_name(G, root_node)}] New state of node_to_be_deleted: {nodes_to_be_deleted}") if verbose else None
+                    f"[{get_node_name(G, root_node)}] Therefore, we will delete: "
+                    f"{list(nx.bfs_tree(G, node, reverse=False))}")
+            elif len(list(G.predecessors(node))) == 0:
+                logging.warning((
+                    f"[{get_node_name(G, root_node)}] That's strange. Node {node} ({get_node_name(G, node)}) "
+                    f"has no predecessors"))
+            else:
+                logging.debug((
+                    f"[{get_node_name(G, root_node)}] The node has just one predecessor and will "
+                    f"be deleted"))
+            logging.debug((
+                f"[{get_node_name(G, root_node)}] New state of node_to_be_deleted: {nodes_to_be_deleted}"))
         return nodes_to_be_deleted, G
     except ValueError:
         logging.info(ValueError)
 
 
 # create n graphs for every permutation
-def create_graphs(G, root_node, node_list, permutations, verbose):
-    graph_list = []
-    node_lists = []
-    for permutation in permutations:
-        current_index = permutations.index(permutation)
-        all_permutations = len(permutations)
-        # logging.info(permutation) if verbose else None
-        index = 0
-        new_G = G.copy()
-        for node in G:
-            if not node in node_list:
-                new_G.remove_node(node)
-        # new_G = nx.path_graph(5)
-        # new_G = G.__class__()
-        # new_G.add_nodes_from(G)
-        # new_G.add_edges_from(G.edges)
-        for node in node_list:
-            # for node in list(nx.bfs_tree(new_G, root_node, reverse=True))[::-1]:
-            attr = new_G.nodes[node]
-            # logging.info(attr)
+def create_graphs(G, root_node, node_list, permutations):
+    all_permutations = len(permutations)
+    fetcher = Permutation_Fetcher(all_permutations)
+    logging.debug(f"Created fetcher object")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
+        for permutation in permutations:
+            current_index = permutations.index(permutation)
+            # launch a thread that shall check the permutation
+            executor.submit(create_graph, G, root_node, node_list, permutation, current_index, all_permutations,
+                            fetcher)
+    while not fetcher.get_done():
+        logging.info("Waiting for all threads to finish")
+        time.sleep(2)
+    graph_list, node_lists = fetcher.get_graph_lists()
+    return graph_list, node_lists
+    # else:
+    #    logging.error(f"Only {fetcher.get_permutations()} of {all_permutations} available")
 
-            # remove the other options
-            if 'xlabel' in attr:
-                name = attr['xlabel'].strip('\"')
-                if name.startswith(">="):
-                    logging.info(f"[{get_node_name(G, root_node)}] [{current_index}/{all_permutations}] [{current_index}/{all_permutations}] We are at disjunctive node {node} ({name}) with predecessor {list(new_G.predecessors(node))}") if verbose else None
-                    available = len(list(new_G.successors(node)))
-                    required = int(re.findall("\d+", name)[0])
-                    difference = available - required
-                    logging.debug(f"The index is {index}, the permutation[index] is {permutation[index]}, the number of combinations is {len(list(itertools.combinations(range(available), available-required)))}")
-                    if permutation[index] == len(list(itertools.combinations(range(available), available - required))):
-                        # logging.debug("Skipped the +1 configuration")
-                        logging.debug(
-                            f"[{get_node_name(G, root_node)}] [{current_index + 1}/{all_permutations}] For the assembly {get_node_name(G, list(G.predecessors(node))[0])}, we are in the +1 configuration where all equipment is used")
-                        index += 1
-                    else:
-                        if difference == 1:
-                            logging.info(f"[{get_node_name(G, root_node)}] [{current_index}/{all_permutations}] We will delete successor #{permutation[index]} in list {list(new_G.successors(node))}") if verbose else None
-                            root_to_be_deleted = list(new_G.successors(node))[permutation[index]]
-                            nodes_to_be_deleted = set(nx.bfs_tree(new_G, root_to_be_deleted, reverse=False))
-                        elif difference >= 2:
-                            logging.info(f"[{get_node_name(G, root_node)}] [{current_index}/{all_permutations}] We will delete {difference} successors in list {list(new_G.successors(node))}") if verbose else None
-                            nodes_to_be_deleted = set()
-                            for redundancy in range(difference):
-                                logging.debug(
-                                    f"[{get_node_name(G, root_node)}] [{current_index + 1}/{all_permutations}] Deleting successor #{list(itertools.combinations(range(available), difference))[permutation[index]][redundancy]}") if verbose else None
-                                root_to_be_deleted = list(new_G.successors(node))[
-                                    list(itertools.combinations(range(available), difference))[permutation[index]][
-                                        redundancy]]
-                                nodes_to_be_deleted.update(list(nx.bfs_tree(new_G, root_to_be_deleted, reverse=False)))
 
-                        logging.debug(f"[{get_node_name(G, root_node)}] [{current_index}/{all_permutations}] Nodes to be deleted before checking for upstream dependencies: {nodes_to_be_deleted}") if verbose else None
-                        nodes_to_be_deleted, new_G = check_for_upstream_dependencies(new_G, list(nodes_to_be_deleted),
-                                                                                     root_node, node, verbose)
-                        logging.debug(
-                            f"[{get_node_name(G, root_node)}] [{current_index + 1}/{all_permutations}] Nodes to be deleted after  checking for upstream dependencies: {nodes_to_be_deleted}") if verbose else None
-                        for node_to_be_deleted in nodes_to_be_deleted:
-                            new_G.remove_node(node_to_be_deleted)
-                        index += 1
-                elif name.startswith("OR"):
-                    logging.info(f"[{get_node_name(G, root_node)}] [{current_index}/{all_permutations}] We are at disjunctive node {node} ({name}) with predecessor {list(new_G.predecessors(node))}") if verbose else None
-                    logging.info(f"[{get_node_name(G, root_node)}] [{current_index}/{all_permutations}] We will delete successor #{permutation[index]} in list {list(new_G.successors(node))}") if verbose else None
-                    root_to_be_deleted = list(new_G.successors(node))[permutation[index]]
-                    nodes_to_be_deleted = set(nx.bfs_tree(new_G, root_to_be_deleted, reverse=False))
+def create_graph(G, root_node, node_list, permutation, current_index, all_permutations, fetcher):
+    logging.info(f"Create graphs for {permutation}")
+    index = 0
+    new_G = G.copy()
+    for node in G:
+        if not node in node_list:
+            new_G.remove_node(node)
+    for node in node_list:
+        # for node in list(nx.bfs_tree(new_G, root_node, reverse=True))[::-1]:
+        attr = new_G.nodes[node]
+        # logging.info(attr)
 
-                    logging.debug(f"[{get_node_name(G, root_node)}] [{current_index}/{all_permutations}] Nodes to be deleted before checking for upstream dependencies: {nodes_to_be_deleted}") if verbose else None
-                    nodes_to_be_deleted, new_G = check_for_upstream_dependencies(new_G, list(nodes_to_be_deleted),
-                                                                                 root_node, node, verbose)
-                    logging.debug(f"[{get_node_name(G, root_node)}] [{current_index}/{all_permutations}] Nodes to be deleted after  checking for upstream dependencies: {nodes_to_be_deleted}") if verbose else None
+        # remove the other options
+        if 'xlabel' in attr:
+            name = attr['xlabel'].strip('\"')
+            if name.startswith(">="):
+                logging.info(
+                    f"[{get_node_name(G, root_node)}] "
+                    f"[{current_index + 1}/{all_permutations}] "
+                    f"We are at disjunctive node {node} ({name}) "
+                    f"with predecessor {list(new_G.predecessors(node))}")
+                available = len(list(new_G.successors(node)))
+                required = int(re.findall("\d+", name)[0])
+                difference = available - required
+                logging.debug(
+                    f"The index is {index}, the permutation[index] is "
+                    f"{permutation[index]}, the number of combinations is "
+                    f"{len(list(itertools.combinations(range(available), available - required)))}")
+                if permutation[index] == len(list(itertools.combinations(
+                        range(available),
+                        available - required))):
+                    # logging.debug("Skipped the +1 configuration")
+                    logging.debug(
+                        f"[{get_node_name(G, root_node)}] "
+                        f"[{current_index + 1}/{all_permutations}] "
+                        f"For the assembly {get_node_name(G, list(G.predecessors(node))[0])}, "
+                        f"we are in the +1 configuration where all equipment is used")
+                    index += 1
+                else:
+                    if difference == 1:
+                        logging.info(
+                            f"[{get_node_name(G, root_node)}] "
+                            f"[{current_index + 1}/{all_permutations}] "
+                            f"We will delete successor #{permutation[index]} "
+                            f"in list {list(new_G.successors(node))}")
+                        root_to_be_deleted = list(new_G.successors(node))[permutation[index]]
+                        nodes_to_be_deleted = set(nx.bfs_tree(new_G, root_to_be_deleted, reverse=False))
+                    elif difference >= 2:
+                        logging.info(
+                            f"[{get_node_name(G, root_node)}] "
+                            f"[{current_index + 1}/{all_permutations}] "
+                            f"We will delete {difference} successors "
+                            f"in list {list(new_G.successors(node))}")
+                        nodes_to_be_deleted = set()
+                        for redundancy in range(difference):
+                            logging.debug(
+                                f"[{get_node_name(G, root_node)}] "
+                                f"[{current_index + 1}/{all_permutations}] "
+                                f"Deleting successor #"
+                                f"{list(itertools.combinations(range(available), difference))[permutation[index]][redundancy]}")
+                            root_to_be_deleted = list(new_G.successors(node))[
+                                list(itertools.combinations(range(available), difference))[
+                                    permutation[index]][redundancy]]
+                            nodes_to_be_deleted.update(list(
+                                nx.bfs_tree(new_G, root_to_be_deleted, reverse=False)))
+
+                    logging.debug(
+                        f"[{get_node_name(G, root_node)}] "
+                        f"[{current_index + 1}/{all_permutations}] "
+                        f"Nodes to be deleted before checking for upstream "
+                        f"dependencies: {nodes_to_be_deleted}")
+                    nodes_to_be_deleted, new_G = check_for_upstream_dependencies(
+                        new_G, list(nodes_to_be_deleted), root_node, node)
+                    logging.debug(
+                        f"[{get_node_name(G, root_node)}] "
+                        f"[{current_index + 1}/{all_permutations}] "
+                        f"Nodes to be deleted after  checking for upstream "
+                        f"dependencies: {nodes_to_be_deleted}")
                     for node_to_be_deleted in nodes_to_be_deleted:
                         new_G.remove_node(node_to_be_deleted)
                     index += 1
-        graph_list.append(new_G)
-        node_lists.append(list(nx.bfs_tree(new_G, root_node, reverse=False)))
-        # node_lists.append(node_list)
-    return graph_list, node_lists
+            elif name.startswith("OR"):
+                logging.info(
+                    f"[{get_node_name(G, root_node)}] "
+                    f"[{current_index + 1}/{all_permutations}] "
+                    f"We are at disjunctive node {node} ({name}) with "
+                    f"predecessor {list(new_G.predecessors(node))}")
+                logging.info(
+                    f"[{get_node_name(G, root_node)}] "
+                    f"[{current_index + 1}/{all_permutations}] "
+                    f"We will keep successor #{permutation[index]} "
+                    f"in list {list(new_G.successors(node))}")
+
+                # all children of the OR node except for one are marked for deletion
+                root_to_be_kept = list(new_G.successors(node))[permutation[index]]
+                nodes_to_be_deleted = set()
+                for successor in new_G.successors(node):
+                    if successor != root_to_be_kept:
+                        for node_to_be_deleted in nx.bfs_tree(new_G, successor, reverse=False):
+                            nodes_to_be_deleted.add(node_to_be_deleted)
+
+                logging.debug(
+                    f"[{get_node_name(G, root_node)}] "
+                    f"[{current_index + 1}/{all_permutations}] "
+                    f"Nodes to be deleted before checking for upstream "
+                    f"dependencies: {nodes_to_be_deleted}")
+                nodes_to_be_deleted, new_G = check_for_upstream_dependencies(
+                    new_G, list(nodes_to_be_deleted), root_node, node)
+                logging.debug(
+                    f"[{get_node_name(G, root_node)}] "
+                    f"[{current_index + 1}/{all_permutations}] "
+                    f"Nodes to be deleted after  checking for upstream "
+                    f"dependencies: {nodes_to_be_deleted}")
+                for node_to_be_deleted in nodes_to_be_deleted:
+                    new_G.remove_node(node_to_be_deleted)
+                index += 1
+    logging.info("Adding permutation")
+    fetcher.add_permutation(new_G, list(nx.bfs_tree(new_G, root_node, reverse=False)))
 
 
 # prune duplicates
-def remove_duplicates(graph_list, node_lists, root_node, verbose):
+def remove_duplicates(graph_list, node_lists, root_node):
     unique_graph_list = []
     unique_node_lists = []
     counter = 0
@@ -296,13 +414,13 @@ def remove_duplicates(graph_list, node_lists, root_node, verbose):
         else:
             counter += 1
     # logging.info(len(unique_node_lists))
-    logging.info("[{get_node_name(G, root_node)}] Deleted " + str(counter) + " duplicate graphs") if verbose else None
+    logging.info("[{get_node_name(G, root_node)}] Deleted " + str(counter) + " duplicate graphs")
     return unique_graph_list, unique_node_lists
 
 
 # combine the functions above so we can resolve the redundancies and create one graph for every combination of equipment
 # that realizes the mode
-def create_graph_list(G, verbose):
+def create_graph_list(G):
     unique_graph_list = {}
     unique_node_lists = {}
     leaf_name_lists = {}
@@ -313,15 +431,15 @@ def create_graph_list(G, verbose):
             logging.warning(
                 f"[{get_node_name(G, root_node)}] Node list empty for root node {root_node} ({get_node_name(G, root_node)}). Skipping...")
             break
-        statespace = create_statespace(G, node_list, verbose)
-        logging.info(f"[{get_node_name(G, root_node)}] statespace: {statespace}") if verbose else None
-        permutations = create_permutations(statespace, verbose)
-        # logging.info(f"[{get_node_name(G, root_node)}] {len(permutations)} permutations: ") if verbose else None
+        statespace = create_statespace(G, node_list)
+        logging.info(f"[{get_node_name(G, root_node)}] statespace: {statespace}")
+        permutations = create_permutations(statespace)
+        # logging.info(f"[{get_node_name(G, root_node)}] {len(permutations)} permutations: ")
         # for permutation in permutations:
-        #     logging.info(f"[{get_node_name(G, root_node)}] {permutation}") if verbose else None
-        graph_list, node_lists = create_graphs(G, root_node, node_list, permutations, verbose)
+        #     logging.info(f"[{get_node_name(G, root_node)}] {permutation}")
+        graph_list, node_lists = create_graphs(G, root_node, node_list, permutations)
         unique_graph_list[root_node], unique_node_lists[root_node] = remove_duplicates(graph_list, node_lists,
-                                                                                       root_node, verbose)
+                                                                                       root_node)
         leaf_name_lists[root_node] = []
         # logging.debug(f"Unique graph list[{root_node}] = {list(unique_graph_list[root_node][0])}")
         for graph in unique_graph_list[root_node]:
@@ -447,7 +565,7 @@ def get_configuration_new(G, layers, all_equipment):
                     available = len(list(G.successors(node)))
                     required = int(re.findall("\d+", get_node_name(G, node))[0])
                     configuration[assembly_name] = (
-                    required, [all_equipment.index(leaf_node) for leaf_node in leaf_nodes])
+                        required, [all_equipment.index(leaf_node) for leaf_node in leaf_nodes])
                     # configuration[assembly_name] = (required, [get_node_name(G, leaf_node) for leaf_node in leaf_nodes])
                     # look if there are more assemblies underneath
                     hierarchichal_assembly = False
@@ -514,7 +632,7 @@ def get_configuration_new(G, layers, all_equipment):
                         logging.debug(
                             f"New configuration for assembly {assembly_name}: {[[all_equipment.index(leaf_node)] for leaf_node in leaf_nodes]}")
                         configuration[assembly_name] = (
-                        required, [[all_equipment.index(leaf_node)] for leaf_node in leaf_nodes])
+                            required, [[all_equipment.index(leaf_node)] for leaf_node in leaf_nodes])
 
                 elif get_node_name(G, node).startswith("OR"):
                     logging.debug(f"Found an OR assembly")
@@ -555,7 +673,7 @@ def get_configuration_new(G, layers, all_equipment):
                         logging.debug(
                             f"New configuration for assembly {assembly_name}: {[[all_equipment.index(leaf_node)] for leaf_node in leaf_nodes]}")
                         configuration[assembly_name] = (
-                        1, [[all_equipment.index(leaf_node)] for leaf_node in leaf_nodes])
+                            1, [[all_equipment.index(leaf_node)] for leaf_node in leaf_nodes])
 
     return configuration
 
@@ -600,25 +718,30 @@ def check_isolability(all_equipment, leaf_name_lists, number_of_faults):
     return non_isolable
 
 
+def check_recoverability(G, all_equipment, leaf_name_lists, number_of_faults):
+    if number_of_faults == 1:
+        plural = False
+    else:
+        plural = True
 
-def check_recoverability(G, all_equipment, leaf_name_lists):
     non_recoverable = []
     for mode in leaf_name_lists:
         mode_available = True
-        for equipment in all_equipment:
-            mode_available_per_equipment = False
-            for configuration in leaf_name_lists[mode]:
-                if equipment not in configuration:
-                    logging.info("The mode " + get_node_name(G, mode) + " is available if " + equipment + " has a fault.")
-                    mode_available_per_equipment = True
+        for components in itertools.combinations(all_equipment, number_of_faults):
+            mode_available_per_combination = False
+            for leaf_name_list in leaf_name_lists[mode]:
+                if reduce(mul, [component not in leaf_name_list for component in components]):
+                    logging.debug(f"The mode {get_node_name(G, mode)} is available if {components} {'have' if plural else 'has'} a fault.")
+                    mode_available_per_combination = True
                     break
-            if not mode_available_per_equipment:
-                logging.info("The mode " + get_node_name(G, mode) + " is not available if " + equipment + " has a fault.")
+            if not mode_available_per_combination:
+                logging.info(f"The mode {get_node_name(G, mode)} is not available if {components} {'have' if plural else 'has'} a fault.")
                 mode_available = False
-        logging.info("The fault recoverability for mode " + get_node_name(G, mode) + " is " + str(mode_available) + "\n\n")
+        logging.info(f"The fault recoverability for mode {get_node_name(G, mode)} is {mode_available}\n\n")
         if not mode_available:
             non_recoverable.append(mode)
     return non_recoverable
+
 
 def examine_successor(G, node, equipment_fault_probabilities):
     # logging.info(f"Examining successor {get_node_name(G, node)} ({node})")
@@ -630,17 +753,23 @@ def examine_successor(G, node, equipment_fault_probabilities):
             # sub assembly fails for num_available-num_required+1 faults
             required = int(re.findall("\d+", get_node_name(G, node))[0])
             # logging.info(f"Node {get_node_name(G, node)} ({node}) requires {required} operational children out of {len(list(G.successors(node)))}")
-            successor_reliabilities = [1 - examine_successor(G, successor, equipment_fault_probabilities) for successor in G.successors(node)]
+            successor_reliabilities = [1 - examine_successor(G, successor, equipment_fault_probabilities) for successor
+                                       in G.successors(node)]
             # logging.info(f"successor_reliabilities: {successor_reliabilities}")
-            fault_probability_combinations = [1 - reduce(mul, combination, 1) for combination in itertools.combinations(successor_reliabilities, required)]
+            fault_probability_combinations = [1 - reduce(mul, combination, 1) for combination in
+                                              itertools.combinations(successor_reliabilities, required)]
             # logging.info(f"fault_probability_combinations: {sorted(fault_probability_combinations)}")
-            fault_probability = reduce(mul, sorted(fault_probability_combinations)[:len(list(G.successors(node)))-required+1], 1)
+            fault_probability = reduce(mul, sorted(fault_probability_combinations)[
+                                            :len(list(G.successors(node))) - required + 1], 1)
         elif get_node_name(G, node).startswith("OR"):
             # sub assembly fails if all members fail
-            fault_probability = reduce(mul, [examine_successor(G, successor, equipment_fault_probabilities) for successor in G.successors(node)], 1)
+            fault_probability = reduce(mul,
+                                       [examine_successor(G, successor, equipment_fault_probabilities) for successor in
+                                        G.successors(node)], 1)
         else:
             # sub assembly fails if one of the members fails
-            successor_reliabilities = [1-examine_successor(G, successor, equipment_fault_probabilities) for successor in G.successors(node)]
+            successor_reliabilities = [1 - examine_successor(G, successor, equipment_fault_probabilities) for successor
+                                       in G.successors(node)]
             reliability = reduce(mul, successor_reliabilities, 1)
             fault_probability = 1 - reliability
     # logging.info(f"Fault probability of {get_node_name(G, node)} ({node}) is {fault_probability:.6}")
