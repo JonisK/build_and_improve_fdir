@@ -7,7 +7,7 @@ sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3.9-d
 python3.9 -m venv python3.9-venv
 source python3.9-venv/bin/activate
 pip install pycairo PyGObject
-pip install pydot regex networkx tqdm numpy dtcontrol
+pip install xdot pydot regex networkx tqdm numpy dtcontrol
 
 # Download and install PRISM model checker
 wget https://www.prismmodelchecker.org/dl/prism-4.7-linux64.tar.gz#download-box
