@@ -238,7 +238,7 @@ class MainWindow(Gtk.Window):
 
         # build isolation per state button
         build_isolation_per_state_button = Gtk.Button(label="Build")
-        # build_isolation_per_state_button.connect("clicked", self.prune_graph_with_initial_state)
+        build_isolation_per_state_button.connect("clicked", self.prune_graph_with_initial_state)
         self.grid.attach_next_to(build_isolation_per_state_button, export_button, Gtk.PositionType.RIGHT, 1, 1)
         self.notebook.append_page(child=self.page5, tab_label=Gtk.Label(label='Enter State'))
 
@@ -444,8 +444,7 @@ class MainWindow(Gtk.Window):
         generate_config_json_isolation(
             self.all_equipment,
             self.base_directory + "/temp/",
-            self.base_directory + "/temp/",
- + "/temp/prism_strategy_config.json")
+            self.base_directory + "/temp/prism_strategy_config.json")
         strategy_name = 'temp/prism_strategy.prism'
         self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
 
@@ -463,6 +462,7 @@ class MainWindow(Gtk.Window):
             f'--equipfailprobs {self.filename_fault_probs} '
             f'--successorstokeep {self.children_to_keep_entry.get_text()} '
             f'--simulationsize {self.simulations_per_node_entry.get_text()} '
+            f'--initialstatefile {self.filename_initial_state} '
             f'{self.filename}\n')
         self.open_file(self.filename, self.page6)
     # def prune_graph_with_initial_state(self, button):
@@ -670,6 +670,11 @@ class MainWindow(Gtk.Window):
 
     def export_action(self, widget):
         equipment_state = [self.equipment_liststore[state][1] for state in range(len(self.all_equipment))]
+        for i in range(len(equipment_state)):
+            if equipment_state[i] == "available":
+                equipment_state[i] = 0
+            elif equipment_state[i] == "suspicious":
+                equipment_state[i] = 1
         with open(self.filename_initial_state, 'w') as file_ref:
             file_ref.write(str(equipment_state))
 

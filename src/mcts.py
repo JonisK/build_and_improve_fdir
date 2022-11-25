@@ -1,8 +1,10 @@
 import logging
 import logging.handlers
 import os
+import pathlib
 import random
 import re
+import string
 import sys
 import time
 
@@ -11,7 +13,8 @@ from tqdm import tqdm
 import argparse
 
 import evaluate_prism_strat
-from base import get_configuration_all_modes, no_possible_successors, get_fault_probabilities, remove_unnecessary_nodes
+from base import get_configuration_all_modes, no_possible_successors, get_fault_probabilities, remove_unnecessary_nodes, \
+    list_to_int
 from evaluate_mcts_strategy import evaluate_mcts_strategy
 from expand import add_edge, mcts_expand, add_state
 from export import export_graph, export_mcts_strategy, export_prism_file
@@ -93,6 +96,19 @@ def mcts(mcts_graph, mcts_data, statistics, parameters, state):
     return mcts_graph, total_sim_iter
 
 
+def get_state_from_file(statistics, filename):
+    f = open(filename, "r")
+    text = f.read()
+    x = re.search(r"\[(.*)]", text)
+    state = x.group(1).split(", ")
+    for i in range(len(state)):
+        if state[i] == "1":
+            state[i] = 1
+        elif state[i] == "0":
+            state[i] = 0
+    return list_to_int(statistics, state)
+
+
 def mcts_outer(parameters):
     # initialize the mcts graph
     mcts_graph = nx.DiGraph()
@@ -121,7 +137,8 @@ def mcts_outer(parameters):
 
     print("Starting MCTS...")
     time.sleep(0.01)
-    for state in tqdm(statistics["all_actions"]):
+    if parameters["initial_state_file"] != "":
+        state = get_state_from_file(statistics, parameters["initial_state_file"])
         if parameters["debug"]:
             logging.debug("-------------------------------------------------------------------------------------------")
             logging.debug("-------------------------------------------------------------------------------------------")
@@ -137,6 +154,25 @@ def mcts_outer(parameters):
             logging.debug("finished mcts from state: " + str(state))
             logging.debug(
                 "-------------------------------------------------------------------------------------------\n\n")
+    else:
+        for state in tqdm(statistics["all_actions"]):
+            if parameters["debug"]:
+                logging.debug(
+                    "-------------------------------------------------------------------------------------------")
+                logging.debug(
+                    "-------------------------------------------------------------------------------------------")
+                logging.debug("Initial state: " + str(state) + "\n")
+            add_state(mcts_graph, mcts_data, statistics, state)
+            add_edge(mcts_graph, root_node, state)
+            statistics["nodes_to_explore"].append(state)
+            mcts_graph, num_current_round_sim = mcts(mcts_graph, mcts_data, statistics, parameters, state)
+            statistics["total_simulations"] += num_current_round_sim
+            statistics["rounds"] += 1
+            if parameters["debug"]:
+                logging.debug("Total simulations: " + str(statistics["total_simulations"]))
+                logging.debug("finished mcts from state: " + str(state))
+                logging.debug(
+                    "-------------------------------------------------------------------------------------------\n\n")
 
     if parameters["debug"]:
         logging.debug("MCTS data: " + str(mcts_data) + "\n\n")
@@ -191,6 +227,9 @@ def arguments(parameters):
     my_parser.add_argument('--evaluatenaive',
                            action='store_true',
                            help='evaluate naive strategy')
+    my_parser.add_argument('--initialstatefile',
+                           action='store',
+                           help='give initial state as input')
 
     args = my_parser.parse_args()
 
@@ -225,6 +264,10 @@ def arguments(parameters):
             parameters["successors_to_keep"] = 1
     if args.evaluatenaive is not None:
         parameters["evaluate_naive"] = args.evaluatenaive
+    if args.initialstatefile is not None:
+        parameters["initial_state_file"] = args.initialstatefile
+    else:
+        parameters["initial_state_file"] = ""
 
     if not os.path.isfile(parameters["input_file"]) or not os.path.isfile(
             parameters["cost_file"]) or not os.path.isfile(parameters["equipment_fail_probabilities_file"]):
@@ -262,9 +305,10 @@ def main():
     # initialize the parameters used
     # sampling type 0: sample the next successor based on distribution
     # 1: sample a defect and find successor according to that defect
+    path_of_src = str(pathlib.Path(__file__).parent.resolve())
     parameters = {"successors_to_keep": 10, "simulations_for_each_children": 200, "sampling_type": 0, "debug": False,
-                  "output_graph": False, "output_dot_file": "temp/mcts_graph.dot",
-                  "strategy_file": "temp/strategy.txt"}
+                  "output_graph": False, "output_dot_file": path_of_src + "temp/mcts_graph.dot",
+                  "strategy_file": path_of_src + "temp/strategy.txt"}
 
     # process arguments
     arguments(parameters)
@@ -292,11 +336,12 @@ def main():
     start_time_prism = 0
     end_time_prism = 0
     if not parameters["mcts_strategy"]:
-        prism_filename = "./temp/model"
+        prism_filename = path_of_src + "/temp/model"
         start_time_prism = time.time()
         prism_state_to_state_mapping = export_prism_file(graph, stats, prism_filename)
         end_time_prism = time.time()
-        evaluate_prism_strat.evaluate_prism_strategy(stats, prism_state_to_state_mapping)
+        if parameters["initial_state_file"] == "":
+            evaluate_prism_strat.evaluate_prism_strategy(stats, prism_state_to_state_mapping)
 
     # Exporting stuff
     if parameters["output_graph"]:

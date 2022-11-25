@@ -479,7 +479,7 @@ def get_configuration_all_modes(statistics, parameters):
     dependency_graph = nx.DiGraph(nx.nx_pydot.from_pydot(graph))
 
     layers = get_layers(dependency_graph)
-    all_equipment = find_leaf_nodes(dependency_graph, layers)
+    all_equipment = sorted(find_leaf_nodes(dependency_graph, layers))
     configuration_all_modes = {}
     for mode in find_root_nodes(dependency_graph):
         # logging.info(f"Configuration for mode {get_node_name(dependency_graph, mode)}")
@@ -531,8 +531,8 @@ def get_all_actions(dependency_graph, all_equipment, statistics):
                 action = list_to_int(statistics, action_vector)
                 all_actions_cost[action] = statistics["mode_costs"][get_node_name(dependency_graph, m)]
                 all_actions.append(action)
-                action_to_name_mapping[action] = m + "_" + str(i)
-                name_to_action_mapping[m + "_" + str(i)] = action
+                action_to_name_mapping[action] = get_node_name(dependency_graph, m) + "_" + str(i)
+                name_to_action_mapping[get_node_name(dependency_graph, m) + "_" + str(i)] = action
     return all_actions, all_list_actions, all_actions_cost, action_to_name_mapping, name_to_action_mapping
 
 

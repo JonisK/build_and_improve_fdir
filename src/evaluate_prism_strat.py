@@ -1,4 +1,5 @@
 import os
+import pathlib
 import re
 import time
 
@@ -47,7 +48,8 @@ def evaluate_strategy(statistics, strategy):
 
 
 def export_state_values(statistics, prism_state_to_state_mapping):
-    f = open("./temp/prism_strategy_states.prism", 'w')
+    path_of_src = str(pathlib.Path(__file__).parent.resolve())
+    f = open(path_of_src + "/temp/prism_strategy_states.prism", 'w')
     f.write("(")
     for i in range(len(statistics["all_equipments"])):
         f.write(statistics["all_equipments"][i])
@@ -69,11 +71,11 @@ def export_state_values(statistics, prism_state_to_state_mapping):
 
 
 def evaluate_prism_strategy(statistics, prism_state_to_state_mapping):
-    command = './prism/bin/prism ./temp/model.prism ./temp/model.props -prop 1 -explicit -exportstrat ' \
-              './temp/prism_strategy.prism -exportstates ./temp/prism_strategy_states.prism -javamaxmem 4g > ' \
-              './temp/prism_output.txt '
+    path_of_prism = str(pathlib.Path(__file__).parent.parent.resolve())
+    path_of_src = str(pathlib.Path(__file__).parent.resolve())
+    command = path_of_prism + "/prism/bin/prism " + path_of_src + "/temp/model.prism " + path_of_src + "/temp/model.props -prop 1 -explicit -exportstrat " + path_of_src + "/temp/prism_strategy.prism -exportstates " + path_of_src + "/temp/prism_strategy_states.prism -javamaxmem 4g > " + path_of_src + "/temp/prism_output.txt"
     os.system(command)
-    state_file = open("./temp/prism_strategy_states.prism", "r")
+    state_file = open(path_of_src + "/temp/prism_strategy_states.prism", "r")
     state_file.readline()
     output_state_to_prism_state = {}
     for line in state_file:
@@ -81,7 +83,7 @@ def evaluate_prism_strategy(statistics, prism_state_to_state_mapping):
         output_state_to_prism_state[int(x.groups()[0])] = int(x.groups()[1])
     state_file.close()
 
-    strategy_file = open("./temp/prism_strategy.prism", "r")
+    strategy_file = open(path_of_src + "/temp/prism_strategy.prism", "r")
     strategy = {}
     for line in strategy_file:
         x = re.search(r"(\d*):(.*)", line)
