@@ -305,7 +305,7 @@ def main():
     # initialize the parameters used
     # sampling type 0: sample the next successor based on distribution
     # 1: sample a defect and find successor according to that defect
-    path_of_src = str(pathlib.Path(__file__).parent.resolve())
+    path_of_src = str(pathlib.Path(__file__).parent.parent.resolve())
     parameters = {"successors_to_keep": 10, "simulations_for_each_children": 200, "sampling_type": 0, "debug": False,
                   "output_graph": False, "output_dot_file": path_of_src + "temp/mcts_graph.dot",
                   "strategy_file": path_of_src + "temp/strategy.txt"}
