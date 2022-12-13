@@ -69,15 +69,26 @@ class MainWindow(Gtk.Window):
 
         self.analysis_done = False
         self.check_isolability_done = False
+        self.export_isolation_done = False
+        self.run_isolation_done = False
         self.check_recoverability_done = False
+        self.export_recovery_done = False
+        self.run_recovery_done = False
 
+        self.isolable = []
         self.non_isolable = []
-        self.non_recoverable = []
         self.num_non_isolable = 0
+        self.isolation_cost = {}
+
+        self.recoverable = []
+        self.non_recoverable = []
         self.num_non_recoverable = 0
+        self.recovery_cost = {}
 
         self.all_equipment = []
+        self.unique_graph_list = {}
         self.leaf_name_lists = {}
+        self.configuration_list = {}
 
         Gtk.Window.__init__(self, title="Analysis Tool")
         self.set_border_width(10)
@@ -161,7 +172,7 @@ class MainWindow(Gtk.Window):
         self.button_export_recovery.connect("clicked", self.export_recovery)
         # self.button_export_recovery.set_sensitive(False)
         grid.attach(self.button_export_recovery, 0, 11, 1, 1)
-        self.button_run_recovery = Gtk.Button(label="Build Recovery")
+        self.button_run_recovery = Gtk.Button(label="Run PRISM")
         self.button_run_recovery.connect("clicked", self.run_recovery)
         # self.button_run_recovery.set_sensitive(False)
         grid.attach_next_to(self.button_run_recovery, self.button_export_recovery, Gtk.PositionType.RIGHT, 1, 1)
@@ -347,12 +358,16 @@ class MainWindow(Gtk.Window):
             self.button_analyze.set_sensitive(True)
             self.button_check_isolation.set_sensitive(False)
             self.button_build_isolation.set_sensitive(False)
+            self.button_export_isolation.set_sensitive(False)
             self.button_check_recovery.set_sensitive(False)
             self.button_build_recovery.set_sensitive(False)
+            self.button_export_recovery.set_sensitive(False)
             self.get_report_initial()
             self.analysis_done = False
             self.check_isolability_done = False
+            self.export_isolation_done = False
             self.check_recoverability_done = False
+            self.export_recovery_done = False
 
             self.open_file(self.filename, self.page1)
             self.page1.zoom_to_fit()
@@ -430,8 +445,10 @@ class MainWindow(Gtk.Window):
         # set button states
         self.button_check_isolation.set_sensitive(True)
         self.button_build_isolation.set_sensitive(True)
+        self.button_export_isolation.set_sensitive(True)
         self.button_check_recovery.set_sensitive(True)
         self.button_build_recovery.set_sensitive(True)
+        self.button_export_recovery.set_sensitive(True)
         self.analysis_done = True
         self.get_report()
         self.scroll_down2()
@@ -439,7 +456,9 @@ class MainWindow(Gtk.Window):
     def reset_check_buttons(self, widget):
         if self.analysis_done:
             self.button_check_isolation.set_sensitive(True)
+            self.button_export_isolation.set_sensitive(True)
             self.button_check_recovery.set_sensitive(True)
+            self.button_export_recovery.set_sensitive(True)
 
     def check_isolation(self, button):
         self.button_check_isolation.set_sensitive(False)
@@ -516,6 +535,7 @@ class MainWindow(Gtk.Window):
         self.log_output.set_editable(False)
 
     def export_isolation(self, button):
+        self.button_export_isolation.set_sensitive(False)
         graph_analysis.prism_isolation.generate_prism_model(
             self.base_directory + "temp/" + "isolation_model.prism",
             self.G,
@@ -530,11 +550,14 @@ class MainWindow(Gtk.Window):
         graph_analysis.prism_isolation.generate_props(
             self.base_directory + "temp/" + "isolation_model.prism",
             self.all_equipment)
+        self.export_isolation_done = True
             
     def run_isolation(self, button):
-        isolability, isolation_cost = graph_analysis.prism_isolation.run_prism(
+        isolability, self.isolation_cost = graph_analysis.prism_isolation.run_prism(
             self.base_directory + "temp/" + "isolation_model.prism",
             self.all_equipment)
+        self.run_isolation_done = True
+        self.get_report()
 
     def check_recovery(self, button):
         self.button_check_recovery.set_sensitive(False)
@@ -607,13 +630,13 @@ class MainWindow(Gtk.Window):
 
     def get_costs(self):
         mode_costs = {}
-        print(self.mode_costs_text.get_buffer().get_text(
-            self.mode_costs_text.get_buffer().get_start_iter(),
-            self.mode_costs_text.get_buffer().get_end_iter(), False))
+        # print(self.mode_costs_text.get_buffer().get_text(
+        #     self.mode_costs_text.get_buffer().get_start_iter(),
+        #     self.mode_costs_text.get_buffer().get_end_iter(), False))
         for line in self.mode_costs_text.get_buffer().get_text(
                 self.mode_costs_text.get_buffer().get_start_iter(),
                 self.mode_costs_text.get_buffer().get_end_iter(), False).split("\n"):
-            print(line)
+            # print(line)
             mode_costs[re.findall("\\w+(?=:)", line)[0]] = float(re.findall("\\d+.\\d+", line)[0])
         # print(mode_costs)
         return mode_costs
@@ -683,6 +706,17 @@ class MainWindow(Gtk.Window):
             fault_probs_sorted = dict(sorted(fault_probs.items(), key=lambda item: item[1], reverse=True))
             for mode in fault_probs_sorted:
                 message += f"\tThe fault probability for mode {get_node_name(self.G, mode)} is {100 * fault_probs_sorted[mode]:.5f} %\n"
+
+        if self.run_isolation_done:
+            message += f"\nCost for the isolation of the components:\n"
+            for component, cost in sorted(self.isolation_cost.items(), key=lambda item: item[1], reverse=True):
+                if cost < float('inf'):
+                    message += f"\tThe cost for isolating {component} is {cost}.\n"
+            for component, cost in self.isolation_cost.items():
+                if cost == float('inf'):
+                    message += f"\t{component} is not isolable. No cost can be calculated.\n"
+        else:
+            message += f"Execute 'Export PRISM' and 'Run PRISM' to get the isolation cost.\n"
 
         end_iter = self.report_text.get_buffer().get_end_iter()
         self.report_text.get_buffer().insert_markup(end_iter, message, -1)
