@@ -1,0 +1,611 @@
+digraph "distributed_mission"
+{
+
+bgcolor = "#ffffff"
+
+node [
+class = "node"
+,fillcolor = "#ff00ff",style = "filled"
+,width = "0.152778",height = "0.152778"
+,shape = "ellipse"
+,color = "#000000"
+,penwidth = "1"
+,"_vis_" = "label|id"
+];
+
+
+"N6" [
+pos = "-14.2361,-0.694444!"
+,xlabel = "detection_mimas"
+]
+
+"N23" [
+pos = "-3.125,-3.125!"
+,xlabel = "com_enceladus"
+]
+
+"N18" [
+pos = "-6.94444,-1.73611!"
+,xlabel = "radar_enceladus"
+]
+
+"N14" [
+pos = "-13.1944,-3.125!"
+,xlabel = "adcs_mimas"
+]
+
+"N10" [
+pos = "-16.3194,-2.43056!"
+,xlabel = "camera_mimas_self"
+]
+
+"N55" [
+pos = "11.8056,-2.43056!"
+,xlabel = "radar_dione_self"
+]
+
+"N34" [
+pos = "15.625,-0.694444!"
+,xlabel = "interception_dione"
+]
+
+"N46" [
+pos = "-5.55556,-3.81944!"
+,xlabel = "adcs_enceladus_self"
+]
+
+"N3" [
+pos = "11.1111,2.08333!"
+,xlabel = "interception"
+]
+
+"N5" [
+pos = "11.1111,1.04167!"
+,xlabel = "OR"
+]
+
+"N59" [
+pos = "17.7083,-3.81944!"
+,xlabel = "com_dione_self"
+]
+
+"N41" [
+pos = "17.7083,-3.125!"
+,xlabel = "com_dione"
+]
+
+"N33" [
+pos = "11.4583,-0.694444!"
+,xlabel = "detection_dione"
+]
+
+"N22" [
+pos = "-5.20833,-3.125!"
+,xlabel = "adcs_enceladus"
+]
+
+"N2" [
+pos = "-3.81944,2.43056!"
+,xlabel = "detection"
+]
+
+"N48" [
+pos = "0.347222,-2.43056!"
+,xlabel = "camera_tethys_self"
+]
+
+"N35" [
+pos = "9.72222,-1.73611!"
+,xlabel = "camera_dione"
+]
+
+"N21" [
+pos = "-13.5417,-3.81944!"
+,xlabel = "adcs_mimas_self"
+]
+
+"N39" [
+pos = "17.7083,-1.73611!"
+,xlabel = "bus_dione"
+]
+
+"N45" [
+pos = "-6.94444,-2.43056!"
+,xlabel = "radar_enceladus_self"
+]
+
+"N53" [
+pos = "8.33333,-3.81944!"
+,xlabel = "com_tethys_self"
+]
+
+"N58" [
+pos = "15.625,-3.81944!"
+,xlabel = "adcs_dione_self"
+]
+
+"N36" [
+pos = "11.8056,-1.73611!"
+,xlabel = "radar_dione"
+]
+
+"N56" [
+pos = "13.8889,-2.43056!"
+,xlabel = "ion_beam_dione_self"
+]
+
+"N17" [
+pos = "-14.2361,-1.73611!"
+,xlabel = "radar_mimas"
+]
+
+"N38" [
+pos = "15.9722,-1.73611!"
+,xlabel = "orbit_control_dione"
+]
+
+"N7" [
+pos = "-6.94444,-0.694444!"
+,xlabel = "detection_enceladus"
+]
+
+"N4" [
+pos = "-6.94444,1.38889!"
+,xlabel = ">=3"
+]
+
+"N42" [
+pos = "12.8472,-4.51389!"
+,xlabel = "eps_dione"
+]
+
+"N37" [
+pos = "13.8889,-1.73611!"
+,xlabel = "ion_beam_dione"
+]
+
+"N25" [
+pos = "2.43056,-1.73611!"
+,xlabel = "radar_tethys"
+]
+
+"N40" [
+pos = "15.625,-3.125!"
+,xlabel = "adcs_dione"
+]
+
+"N27" [
+pos = "-11.8056,-3.81944!"
+,xlabel = "com_mimas_self"
+]
+
+"N19" [
+pos = "-3.81944,-1.73611!"
+,xlabel = "bus_enceladus"
+]
+
+"N12" [
+pos = "-12.1528,-1.73611!"
+,xlabel = "bus_mimas"
+]
+
+"N9" [
+pos = "6.59722,-0.694444!"
+,xlabel = "interception_tethys"
+]
+
+"N49" [
+pos = "2.43056,-2.43056!"
+,xlabel = "radar_tethys_self"
+]
+
+"N51" [
+pos = "6.94444,-2.43056!"
+,xlabel = "orbit_control_tethys_self"
+]
+
+"N47" [
+pos = "-3.47222,-3.81944!"
+,xlabel = "com_enceladus_self"
+]
+
+"N54" [
+pos = "9.72222,-2.43056!"
+,xlabel = "camera_dione_self"
+]
+
+"N24" [
+pos = "0.347222,-1.73611!"
+,xlabel = "camera_tethys"
+]
+
+"N31" [
+pos = "8.33333,-3.125!"
+,xlabel = "com_tethys"
+]
+
+"N52" [
+pos = "6.25,-3.81944!"
+,xlabel = "adcs_tethys_self"
+]
+
+"N44" [
+pos = "-9.375,-2.43056!"
+,xlabel = "camera_enceladus_self"
+]
+
+"N57" [
+pos = "16.3194,-2.43056!"
+,xlabel = "orbit_control_dione_self"
+]
+
+"N61" [
+pos = "11.1111,3.47222!"
+,xlabel = "REMOVE_DEBRIS"
+]
+
+"N8" [
+pos = "3.125,-0.694444!"
+,xlabel = "detection_tethys"
+]
+
+"N43" [
+pos = "-14.2361,-2.43056!"
+,xlabel = "radar_mimas_self"
+]
+
+"N15" [
+pos = "-11.4583,-3.125!"
+,xlabel = "com_mimas"
+]
+
+"N11" [
+pos = "-16.3194,-1.73611!"
+,xlabel = "camera_mimas"
+]
+
+"N16" [
+pos = "-9.375,-1.73611!"
+,xlabel = "camera_enceladus"
+]
+
+"N13" [
+pos = "-14.9306,-4.51389!"
+,xlabel = "eps_mimas"
+]
+
+"N30" [
+pos = "6.25,-3.125!"
+,xlabel = "adcs_tethys"
+]
+
+"N60" [
+pos = "-3.81944,3.47222!"
+,xlabel = "SCAN_DEBRIS"
+]
+
+"N50" [
+pos = "4.51389,-2.43056!"
+,xlabel = "ion_beam_tethys_self"
+]
+
+"N29" [
+pos = "6.59722,-1.73611!"
+,xlabel = "orbit_control_tethys"
+]
+
+"N32" [
+pos = "4.51389,-4.51389!"
+,xlabel = "eps_tethys"
+]
+
+"N26" [
+pos = "8.33333,-1.73611!"
+,xlabel = "bus_tethys"
+]
+
+"N28" [
+pos = "4.51389,-1.73611!"
+,xlabel = "ion_beam_tethys"
+]
+
+"N1" [
+pos = "3.81944,3.81944!"
+,xlabel = "SCAN_AND_REMOVE_DEBRIS"
+]
+
+"N20" [
+pos = "-7.29167,-4.51389!"
+,xlabel = "eps_enceladus"
+]
+
+
+
+edge [
+class = "edge"
+,weight = "1"
+,penwidth = "1"
+,"_vis_" = "label"
+,"color" = "#a0a0a4"
+,"style" = "solid"
+];
+
+
+"N16" -> "N22" [id = "E50"
+];
+
+"N19" -> "N22" [id = "E26"
+];
+
+"N26" -> "N31" [id = "E36"
+];
+
+"N34" -> "N37" [id = "Copy1 of E37"
+];
+
+"N14" -> "N13" [id = "E24"
+];
+
+"N17" -> "N43" [id = "E56"
+];
+
+"N41" -> "N42" [id = "Copy1 of E43"
+];
+
+"N7" -> "N16" [id = "E16"
+];
+
+"N14" -> "N21" [id = "E54"
+];
+
+"N29" -> "N32" [id = "E41"
+];
+
+"N1" -> "N2" [id = "E1"
+];
+
+"N36" -> "N42" [id = "Copy1 of E34"
+];
+
+"N29" -> "N51" [id = "E64"
+];
+
+"N11" -> "N14" [id = "E48"
+];
+
+"N60" -> "N2" [id = "E73"
+];
+
+"N28" -> "N30" [id = "E47"
+];
+
+"N12" -> "N15" [id = "E15"
+];
+
+"N37" -> "N42" [id = "Copy1 of E40"
+];
+
+"N19" -> "N23" [id = "E27"
+];
+
+"N35" -> "N42" [id = "Copy1 of E9"
+];
+
+"N9" -> "N29" [id = "E38"
+];
+
+"N12" -> "N14" [id = "E14"
+];
+
+"N6" -> "N11" [id = "E10"
+];
+
+"N6" -> "N17" [id = "E17"
+];
+
+"N5" -> "N34" [id = "E52"
+];
+
+"N40" -> "N42" [id = "Copy1 of E42"
+];
+
+"N8" -> "N24" [id = "E30"
+];
+
+"N16" -> "N20" [id = "E21"
+];
+
+"N25" -> "N30" [id = "E46"
+];
+
+"N34" -> "N38" [id = "Copy1 of E38"
+];
+
+"N41" -> "N59" [id = "E72"
+];
+
+"N16" -> "N44" [id = "E57"
+];
+
+"N25" -> "N49" [id = "E62"
+];
+
+"N36" -> "N40" [id = "Copy1 of E46"
+];
+
+"N4" -> "N8" [id = "E7"
+];
+
+"N31" -> "N32" [id = "E43"
+];
+
+"N5" -> "N9" [id = "E8"
+];
+
+"N2" -> "N4" [id = "E3"
+];
+
+"N4" -> "N33" [id = "E51"
+];
+
+"N22" -> "N46" [id = "E59"
+];
+
+"N24" -> "N32" [id = "E9"
+];
+
+"N34" -> "N39" [id = "Copy1 of E39"
+];
+
+"N24" -> "N30" [id = "E33"
+];
+
+"N24" -> "N48" [id = "E61"
+];
+
+"N35" -> "N54" [id = "E67"
+];
+
+"N37" -> "N56" [id = "E69"
+];
+
+"N18" -> "N45" [id = "E58"
+];
+
+"N39" -> "N40" [id = "Copy1 of E35"
+];
+
+"N37" -> "N40" [id = "Copy1 of E47"
+];
+
+"N23" -> "N47" [id = "E60"
+];
+
+"N38" -> "N42" [id = "Copy1 of E41"
+];
+
+"N23" -> "N20" [id = "E29"
+];
+
+"N30" -> "N52" [id = "E65"
+];
+
+"N40" -> "N58" [id = "E71"
+];
+
+"N6" -> "N12" [id = "E11"
+];
+
+"N36" -> "N55" [id = "E68"
+];
+
+"N61" -> "N3" [id = "E74"
+];
+
+"N25" -> "N32" [id = "E34"
+];
+
+"N39" -> "N41" [id = "Copy1 of E36"
+];
+
+"N12" -> "N13" [id = "E13"
+];
+
+"N26" -> "N30" [id = "E35"
+];
+
+"N8" -> "N25" [id = "E31"
+];
+
+"N11" -> "N10" [id = "E53"
+];
+
+"N22" -> "N20" [id = "E28"
+];
+
+"N38" -> "N40" [id = "Copy1 of E44"
+];
+
+"N4" -> "N6" [id = "E5"
+];
+
+"N15" -> "N27" [id = "E55"
+];
+
+"N29" -> "N30" [id = "E44"
+];
+
+"N17" -> "N14" [id = "E49"
+];
+
+"N19" -> "N20" [id = "E23"
+];
+
+"N33" -> "N39" [id = "Copy1 of E32"
+];
+
+"N33" -> "N35" [id = "Copy1 of E30"
+];
+
+"N4" -> "N7" [id = "E6"
+];
+
+"N35" -> "N40" [id = "Copy1 of E33"
+];
+
+"N3" -> "N5" [id = "E4"
+];
+
+"N30" -> "N32" [id = "E42"
+];
+
+"N7" -> "N19" [id = "E20"
+];
+
+"N8" -> "N26" [id = "E32"
+];
+
+"N11" -> "N13" [id = "E12"
+];
+
+"N1" -> "N3" [id = "E2"
+];
+
+"N33" -> "N36" [id = "Copy1 of E31"
+];
+
+"N18" -> "N22" [id = "E45"
+];
+
+"N38" -> "N57" [id = "E70"
+];
+
+"N28" -> "N50" [id = "E63"
+];
+
+"N28" -> "N32" [id = "E40"
+];
+
+"N17" -> "N13" [id = "E18"
+];
+
+"N18" -> "N20" [id = "E22"
+];
+
+"N9" -> "N26" [id = "E39"
+];
+
+"N15" -> "N13" [id = "E25"
+];
+
+"N7" -> "N18" [id = "E19"
+];
+
+"N31" -> "N53" [id = "E66"
+];
+
+"N9" -> "N28" [id = "E37"
+];
+
+
+}

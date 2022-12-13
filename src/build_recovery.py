@@ -34,7 +34,8 @@ else:
 
 layers = get_layers(G)
 all_equipment = sorted([get_node_name(G, node) for node in find_leaf_nodes(G, layers)])
-(unique_graph_list, unique_node_lists, leaf_name_lists) = create_graph_list(G)
+unique_graph_list, unique_node_lists, leaf_name_lists, configuration_list, configuration_space \
+    = create_graph_list(G, threading=False)
 
 start_time = time.time()
 verbose = False

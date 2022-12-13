@@ -1,0 +1,262 @@
+digraph "robot_sat"
+{
+
+bgcolor = "#ffffff"
+
+node [
+class = "node"
+,fillcolor = "#ff00ff",style = "filled"
+,width = "0.152778",height = "0.152778"
+,shape = "ellipse"
+,color = "#000000"
+,penwidth = "1"
+,"_vis_" = "id|label"
+];
+
+
+"N8" [
+pos = "7.98611,5.20833!"
+,xlabel = "SUPPLY_SYSTEMS"
+]
+
+"N18" [
+pos = "4.16667,-1.04167!"
+,xlabel = "battery"
+]
+
+"N28" [
+pos = "8.33333,-2.08333!"
+,xlabel = "rw4"
+]
+
+"N6" [
+pos = "5.90278,5.20833!"
+,xlabel = "GENERATE_POWER"
+]
+
+"N17" [
+pos = "6.59722,3.81944!"
+,xlabel = "mppt"
+]
+
+"N19" [
+pos = "5.20833,-2.77778!"
+,xlabel = "battery_2"
+]
+
+"N20" [
+pos = "-1.38889,-1.73611!"
+,xlabel = "regulator_itself"
+]
+
+"N24" [
+pos = "7.29167,-1.04167!"
+,xlabel = ">=3"
+]
+
+"N12" [
+pos = "2.08333,5.20833!"
+,xlabel = "MC_ASSESS_ARRAY"
+]
+
+"N11" [
+pos = "-0.694444,3.125!"
+,xlabel = "robot=inspect_array_pose"
+]
+
+"N23" [
+pos = "7.29167,0!"
+,xlabel = "reaction_wheels"
+]
+
+"N15" [
+pos = "3.81944,1.38889!"
+,xlabel = "adcs"
+]
+
+"N25" [
+pos = "6.25,-2.08333!"
+,xlabel = "rw1"
+]
+
+"N26" [
+pos = "6.94444,-2.08333!"
+,xlabel = "rw2"
+]
+
+"N7" [
+pos = "4.16667,-2.08333!"
+,xlabel = "OR"
+]
+
+"N22" [
+pos = "2.77778,1.38889!"
+,xlabel = "com_itself"
+]
+
+"N2" [
+pos = "-4.86111,3.81944!"
+,xlabel = "robot"
+]
+
+"N27" [
+pos = "7.63889,-2.08333!"
+,xlabel = "rw3"
+]
+
+"N14" [
+pos = "3.125,2.77778!"
+,xlabel = "com"
+]
+
+"N13" [
+pos = "1.73611,2.77778!"
+,xlabel = "picture=taken"
+]
+
+"N9" [
+pos = "3.125,-2.77778!"
+,xlabel = "battery_1"
+]
+
+"N10" [
+pos = "-2.43056,3.125!"
+,xlabel = "camera"
+]
+
+"N3" [
+pos = "-5.55556,2.08333!"
+,xlabel = "robot_itself"
+]
+
+"N1" [
+pos = "-4.86111,5.20833!"
+,xlabel = "MOVE_TO_INSPECT_ARRAY_POSE
+robot=inspect_array_pose"
+]
+
+"N16" [
+pos = "4.16667,3.125!"
+,xlabel = "array"
+]
+
+"N21" [
+pos = "3.47222,0.347222!"
+,xlabel = "adcs_itself"
+]
+
+"N4" [
+pos = "-1.04167,-0.347222!"
+,xlabel = "regulator"
+]
+
+"N5" [
+pos = "-1.73611,5.20833!"
+,xlabel = "TAKE_PICTURE_OF_ARRAY
+picture=taken"
+]
+
+
+
+edge [
+class = "edge"
+,weight = "1"
+,penwidth = "1"
+,"_vis_" = "label"
+,"color" = "#a0a0a4"
+,"style" = "solid"
+];
+
+
+"N6" -> "N18" [id = "E14"
+];
+
+"N4" -> "N18" [id = "E15"
+];
+
+"N4" -> "N20" [id = "E22"
+];
+
+"N12" -> "N14" [id = "E9"
+];
+
+"N10" -> "N4" [id = "E21"
+];
+
+"N8" -> "N18" [id = "E5"
+];
+
+"N6" -> "N17" [id = "E13"
+];
+
+"N6" -> "N16" [id = "E4"
+];
+
+"N2" -> "N3" [id = "E2"
+];
+
+"N15" -> "N23" [id = "E25"
+];
+
+"N15" -> "N4" [id = "E17"
+];
+
+"N7" -> "N19" [id = "E20"
+];
+
+"N2" -> "N4" [id = "E3"
+];
+
+"N18" -> "N7" [id = "E18"
+];
+
+"N8" -> "N4" [id = "E16"
+];
+
+"N7" -> "N9" [id = "E19"
+];
+
+"N14" -> "N22" [id = "E24"
+];
+
+"N14" -> "N4" [id = "E10"
+];
+
+"N12" -> "N16" [id = "E12"
+];
+
+"N14" -> "N15" [id = "E11"
+];
+
+"N24" -> "N28" [id = "E30"
+];
+
+"N5" -> "N11" [id = "E7"
+];
+
+"N1" -> "N2" [id = "E1"
+];
+
+"N12" -> "N13" [id = "E8"
+];
+
+"N15" -> "N21" [id = "E23"
+];
+
+"N5" -> "N10" [id = "E6"
+];
+
+"N24" -> "N26" [id = "E28"
+];
+
+"N23" -> "N24" [id = "E26"
+];
+
+"N24" -> "N27" [id = "E29"
+];
+
+"N24" -> "N25" [id = "E27"
+];
+
+
+}
