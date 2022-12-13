@@ -763,6 +763,11 @@ class MainWindow(Gtk.Window):
 
     def export_action(self, widget):
         equipment_state = [self.equipment_liststore[state][1] for state in range(len(self.all_equipment))]
+        for i in range(len(equipment_state)):
+            if equipment_state[i] == "available":
+                equipment_state[i] = 0
+            elif equipment_state[i] == "suspicious":
+                equipment_state[i] = 1
         with open(self.filename_initial_state, 'w') as file_ref:
             file_ref.write(str(equipment_state))
 
