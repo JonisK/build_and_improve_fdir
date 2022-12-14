@@ -340,8 +340,7 @@ def main():
         start_time_prism = time.time()
         prism_state_to_state_mapping = export_prism_file(graph, stats, prism_filename)
         end_time_prism = time.time()
-        if parameters["initial_state_file"] == "":
-            evaluate_prism_strat.evaluate_prism_strategy(stats, prism_state_to_state_mapping)
+        evaluate_prism_strat.evaluate_prism_strategy(parameters, stats, prism_state_to_state_mapping)
 
     # Exporting stuff
     if parameters["output_graph"]:
