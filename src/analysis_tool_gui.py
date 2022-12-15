@@ -267,7 +267,7 @@ class MainWindow(Gtk.Window):
 
         # build isolation per state button
         build_isolation_per_state_button = Gtk.Button(label="Build")
-        build_isolation_per_state_button.connect("clicked", self.prune_graph_with_initial_state)
+        build_isolation_per_state_button.connect("clicked", self.build_prune_and_compress_with_initial_state)
         self.grid.attach_next_to(build_isolation_per_state_button, export_button, Gtk.PositionType.RIGHT, 1, 1)
         self.notebook.append_page(child=self.page5, tab_label=Gtk.Label(label='Enter State'))
 
@@ -497,6 +497,18 @@ class MainWindow(Gtk.Window):
             f'--simulationsize {self.simulations_per_node_entry.get_text()} '
             f'{self.filename}\n')
 
+    def build_prune_and_compress_with_initial_state(self, button):
+        # self.button_build_isolation.set_sensitive(False)
+        self.terminal_notebook.set_current_page(0)
+        self.prune_graph_with_initial_state(button)
+        self.feed_input(f'\n')
+        # generate_config_json_isolation(
+        #     self.all_equipment,
+        #     self.base_directory + "/temp/",
+        #     self.base_directory + "/temp/prism_strategy_config.json")
+        # strategy_name = 'temp/prism_strategy.prism'
+        # self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
+
     def prune_graph_with_initial_state(self, button):
         self.feed_input(f'python3 src/mcts.py '
             f'--modecosts {self.filename_mode_costs} '
@@ -504,8 +516,9 @@ class MainWindow(Gtk.Window):
             f'--successorstokeep {self.children_to_keep_entry.get_text()} '
             f'--simulationsize {self.simulations_per_node_entry.get_text()} '
             f'--initialstatefile {self.filename_initial_state} '
+            f'--debug '
             f'{self.filename}\n')
-        self.open_file(self.filename, self.page6)
+        # self.open_file(self.filename, self.page6)
     # def prune_graph_with_initial_state(self, button):
     #     self.terminal_notebook.set_current_page(1)
     #
