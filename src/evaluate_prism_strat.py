@@ -70,7 +70,7 @@ def export_state_values(statistics, prism_state_to_state_mapping):
     f.close()
 
 
-def evaluate_prism_strategy(statistics, prism_state_to_state_mapping):
+def evaluate_prism_strategy(parameters, statistics, prism_state_to_state_mapping):
     path_of_prism = str(pathlib.Path(__file__).parent.parent.resolve())
     path_of_src = str(pathlib.Path(__file__).parent.parent.resolve())
     command = path_of_prism + "/prism/bin/prism " + path_of_src + "/temp/model.prism " + path_of_src + "/temp/model.props -prop 1 -explicit -exportstrat " + path_of_src + "/temp/prism_strategy.prism -exportstates " + path_of_src + "/temp/prism_strategy_states.prism -javamaxmem 4g > " + path_of_src + "/temp/prism_output.txt"
@@ -96,5 +96,6 @@ def evaluate_prism_strategy(statistics, prism_state_to_state_mapping):
     strategy_file.close()
     export_state_values(statistics, prism_state_to_state_mapping)
 
-    result = evaluate_strategy(statistics, strategy)
-    export_weakness_report(statistics, result)
+    if parameters["initial_state_file"] == "":
+        result = evaluate_strategy(statistics, strategy)
+        export_weakness_report(statistics, result)
