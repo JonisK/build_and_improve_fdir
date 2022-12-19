@@ -1,8 +1,10 @@
+import re
+
 import networkx as nx
 
 from evaluate_mcts_strategy import pick_best_available_action
 from base import remove_unnecessary_nodes, int_to_list, find_successors, find_successor_prob, get_action_name, \
-    no_possible_successors, get_cost
+    no_possible_successors, get_cost, list_to_int
 
 
 def export_mcts_strategy(graph, data, statistics, parameters):
@@ -67,7 +69,20 @@ def get_prism_state(state_to_prism_state_mapping, prism_state_to_state_mapping, 
     return prism_state
 
 
-def export_prism_file(mcts_graph, statistics, filename):
+def get_state_from_file(statistics, filename):
+    f = open(filename, "r")
+    text = f.read()
+    x = re.search(r"\[(.*)]", text)
+    state = x.group(1).split(", ")
+    for i in range(len(state)):
+        if state[i] == "1":
+            state[i] = 1
+        elif state[i] == "0":
+            state[i] = 0
+    return list_to_int(statistics, state)
+
+
+def export_prism_file(mcts_graph, parameters, statistics, filename):
     # initial stuff
     model_file = open(filename + ".prism", "w")
     model_file.write("mdp\n\n")
@@ -122,9 +137,14 @@ def export_prism_file(mcts_graph, statistics, filename):
 
     # init states
     model_file.write("\ninit\n\t")
-    for state in statistics["all_actions"][:-1]:
+    if parameters["initial_state_file"] != "":
+        state = get_state_from_file(statistics, parameters["initial_state_file"])
         prism_state = get_prism_state(state_to_prism_state_mapping, prism_state_to_state_mapping, state)
         model_file.write("(s=" + str(prism_state) + ") | ")
+    else:
+        for state in statistics["all_actions"][:-1]:
+            prism_state = get_prism_state(state_to_prism_state_mapping, prism_state_to_state_mapping, state)
+            model_file.write("(s=" + str(prism_state) + ") | ")
     prism_state = get_prism_state(state_to_prism_state_mapping, prism_state_to_state_mapping, statistics["all_actions"][-1])
     model_file.write("(s=" + str(prism_state) + ")\n")
     model_file.write("endinit")

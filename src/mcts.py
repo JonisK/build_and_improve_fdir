@@ -338,7 +338,7 @@ def main():
     if not parameters["mcts_strategy"]:
         prism_filename = path_of_src + "/temp/model"
         start_time_prism = time.time()
-        prism_state_to_state_mapping = export_prism_file(graph, stats, prism_filename)
+        prism_state_to_state_mapping = export_prism_file(graph, parameters, stats, prism_filename)
         end_time_prism = time.time()
         evaluate_prism_strat.evaluate_prism_strategy(parameters, stats, prism_state_to_state_mapping)
 
