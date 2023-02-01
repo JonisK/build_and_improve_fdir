@@ -8,6 +8,7 @@ python3 -m venv python3-venv
 source python3-venv/bin/activate
 pip install pycairo PyGObject
 pip install xdot pydot regex networkx tqdm numpy dtcontrol
+pip install git+https://bitbucket.org/william_rusnack/to-precision.git
 
 # Download and install PRISM model checker
 wget https://www.prismmodelchecker.org/dl/prism-4.7-linux64.tar.gz#download-box

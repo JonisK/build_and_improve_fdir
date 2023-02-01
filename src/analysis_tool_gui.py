@@ -24,7 +24,9 @@ from graph_analysis.generate_config_json import generate_config_json_isolation
 from graph_analysis.graph_analysis import create_graph_list, get_layers, \
     get_node_name, find_root_nodes, find_leaf_nodes, check_isolability, \
     check_recoverability, get_root_node_names, get_fault_probability, \
-    get_node_id, find_isolated_nodes
+    find_isolated_nodes
+from graph_analysis.sensitivity_analysis import get_sensitivity_analysis, \
+    get_uncertainty_propagation
 import graph_analysis.prism_isolation
 
 import pydot
@@ -275,6 +277,20 @@ class MainWindow(Gtk.Window):
         self.page6 = xdot.DotWidget()
         self.notebook.append_page(child=self.page6, tab_label=Gtk.Label(label='Isolation graph'))
 
+        # Seventh page, sensitivity table
+        self.page7 = Gtk.Box()
+        self.page7.set_border_width(10)
+        self.sensitivity_text = Gtk.TextView()
+        self.sensitivity_text.set_editable(False)
+        self.sensitivity_text.set_monospace(True)
+        self.get_sensitivity_initial()
+        self.sensitivity_scroller = Gtk.ScrolledWindow()
+        self.sensitivity_scroller.set_hexpand(True)
+        self.sensitivity_scroller.set_vexpand(True)
+        self.sensitivity_scroller.add(self.sensitivity_text)
+        self.page7.add(self.sensitivity_scroller)
+        self.notebook.append_page(child=self.page7, tab_label=Gtk.Label(label='Sensitivity'))
+
         grid.attach(self.notebook, 2, 1, 5, 12)
         paned.add1(grid)
 
@@ -438,9 +454,10 @@ class MainWindow(Gtk.Window):
 
     def analyze_graph(self, G):
         logging.info("Analyze the configuration graph")
+        threading = True
         self.unique_graph_list, unique_node_lists, self.leaf_name_lists, \
             self.configuration_list, configuration_space = \
-            create_graph_list(G, threading=False)
+            create_graph_list(G, threading)
 
         # set button states
         self.button_check_isolation.set_sensitive(True)
@@ -451,6 +468,7 @@ class MainWindow(Gtk.Window):
         self.button_export_recovery.set_sensitive(True)
         self.analysis_done = True
         self.get_report()
+        self.get_sensitivity()
         self.scroll_down2()
 
     def reset_check_buttons(self, widget):
@@ -518,7 +536,21 @@ class MainWindow(Gtk.Window):
             f'--initialstatefile {self.filename_initial_state} '
             f'--debug '
             f'{self.filename}\n')
-        # self.open_file(self.filename, self.page6)
+
+        self.feed_input(f'\n')
+        generate_config_json_isolation(
+            self.all_equipment,
+            self.base_directory + "/temp/",
+            self.base_directory + "/temp/prism_strategy_config.json")
+        strategy_name = 'temp/prism_strategy.prism'
+
+        # Generate decision tree for initial state
+        self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
+
+        # Show decision tree on page 6
+        self.open_file(self.base_directory + "/decision_trees/avg/prism_strategy/avg.dot", self.page6)
+        self.page6.zoom_to_fit()
+
     # def prune_graph_with_initial_state(self, button):
     #     self.terminal_notebook.set_current_page(1)
     #
@@ -624,11 +656,51 @@ class MainWindow(Gtk.Window):
                 self.fault_probabilities_text.get_buffer().get_start_iter(),
                 self.fault_probabilities_text.get_buffer().get_end_iter(), False))
 
-    def get_probabilities(self):
+    def check_all_probabilities_present(self):
+        all_probabilities_present = True
         probabilities_text = self.fault_probabilities_text.get_buffer().get_text(
             self.fault_probabilities_text.get_buffer().get_start_iter(),
             self.fault_probabilities_text.get_buffer().get_end_iter(), False)
-        return {line.split(":")[0]: float(line.split(":")[1]) for line in probabilities_text.split(",\n")}
+
+        for line in probabilities_text.split("\n"):
+            item = re.search(r"([a-zA-Z0-9_-]*)\s*:"  # name
+                             r"\s*([0-9.]*),?\s*"  # mean fault probability
+                             r"\[?([0-9.]*),?\s*"  # lower bound of uncertainty interval
+                             r"([0-9.]*)\]?",  # upper bound of uncertainty interval
+                             line)
+            if item.group(1) and item.group(2) and not (item.group(3) and item.group(4)):
+                all_probabilities_present = False
+
+        return all_probabilities_present
+
+    def get_probabilities(self, probabilities_type="mean"):
+        probabilities_text = self.fault_probabilities_text.get_buffer().get_text(
+            self.fault_probabilities_text.get_buffer().get_start_iter(),
+            self.fault_probabilities_text.get_buffer().get_end_iter(), False)
+
+        mean_probabilities = {}
+        # logging.info(probabilities_text.split('\n'))
+        if probabilities_type == "all":
+            lower_bound = {}
+            upper_bound = {}
+        for line in probabilities_text.split("\n"):
+            item = re.search(r"([a-zA-Z0-9_-]*)\s*:"    # name
+                             r"\s*([0-9.]*),?\s*"       # mean fault probability
+                             r"\[?([0-9.]*),?\s*"       # lower bound of uncertainty interval
+                             r"([0-9.]*)\]?",           # upper bound of uncertainty interval
+                             line)
+            if item.group(1) and item.group(2):
+                mean_probabilities[item.group(1)] = float(item.group(2))
+            if probabilities_type == "all" and item.group(3) and item.group(4):
+                lower_bound[item.group(1)] = float(item.group(3))
+                upper_bound[item.group(1)] = float(item.group(4))
+        # logging.info(f"{mean_probabilities=}")
+        if probabilities_type == "all":
+            return mean_probabilities, lower_bound, upper_bound
+        else:
+            return mean_probabilities
+
+        #return {line.split(":")[0]: float(line.split(":")[1]) for line in probabilities_text.split(",\n")}
 
     def read_costs(self):
         try:
@@ -643,15 +715,14 @@ class MainWindow(Gtk.Window):
 
     def get_costs(self):
         mode_costs = {}
-        # print(self.mode_costs_text.get_buffer().get_text(
-        #     self.mode_costs_text.get_buffer().get_start_iter(),
-        #     self.mode_costs_text.get_buffer().get_end_iter(), False))
-        for line in self.mode_costs_text.get_buffer().get_text(
-                self.mode_costs_text.get_buffer().get_start_iter(),
-                self.mode_costs_text.get_buffer().get_end_iter(), False).split("\n"):
-            # print(line)
-            mode_costs[re.findall("\\w+(?=:)", line)[0]] = float(re.findall("\\d+.\\d+", line)[0])
-        # print(mode_costs)
+        costs_text = self.mode_costs_text.get_buffer().get_text(
+            self.mode_costs_text.get_buffer().get_start_iter(),
+            self.mode_costs_text.get_buffer().get_end_iter(), False)
+        # logging.info(costs_text.split("\n"))
+        for line in costs_text.split("\n"):
+            # logging.info(f"{line=}")
+            mode_costs[re.findall(r"\w+(?=:)", line)[0]] = float(re.findall(r"\d+.\d+", line)[0])
+        # logging.info(f"{mode_costs=}")
         return mode_costs
 
     def generate_mode_costs(self):
@@ -715,7 +786,7 @@ class MainWindow(Gtk.Window):
         if self.analysis_done:
             message += f"Assuming the component fault probabilities defined in ‘{self.filename_fault_probs.split('/')[-1]}’, the modes have these fault probabilities:\n"
 
-            fault_probs = {mode: get_fault_probability(self.G, mode, self.get_probabilities()) for mode in find_root_nodes(self.G)}
+            fault_probs = {mode: get_fault_probability(self.G, mode, self.get_probabilities(probabilities_type="mean")) for mode in find_root_nodes(self.G)}
             fault_probs_sorted = dict(sorted(fault_probs.items(), key=lambda item: item[1], reverse=True))
             for mode in fault_probs_sorted:
                 message += f"\tThe fault probability for mode {get_node_name(self.G, mode)} is {100 * fault_probs_sorted[mode]:.5f} %\n"
@@ -783,6 +854,33 @@ class MainWindow(Gtk.Window):
                 equipment_state[i] = 1
         with open(self.filename_initial_state, 'w') as file_ref:
             file_ref.write(str(equipment_state))
+
+    def get_sensitivity_initial(self):
+        # Clear textview
+        self.sensitivity_text.get_buffer().delete(
+            self.sensitivity_text.get_buffer().get_start_iter(),
+            self.sensitivity_text.get_buffer().get_end_iter())
+
+        message = "Run Analyze Graph, to retrieve the sensitivity analysis"
+        end_iter = self.sensitivity_text.get_buffer().get_end_iter()
+        self.sensitivity_text.get_buffer().insert_markup(end_iter, message, -1)
+
+    def get_sensitivity(self):
+        # Clear textview
+        self.sensitivity_text.get_buffer().delete(
+            self.sensitivity_text.get_buffer().get_start_iter(),
+            self.sensitivity_text.get_buffer().get_end_iter())
+
+        message = get_sensitivity_analysis(self.G, self.get_probabilities(probabilities_type="mean"), self.get_costs())
+        message += "\n\n\n"
+        if self.check_all_probabilities_present():
+            equipment_fault_probabilities, equipment_fault_probabilities_lower_bound, equipment_fault_probabilities_upper_bound = self.get_probabilities(probabilities_type="all")
+            message += get_uncertainty_propagation(self.G, equipment_fault_probabilities, equipment_fault_probabilities_lower_bound, equipment_fault_probabilities_upper_bound, self.get_costs())
+        else:
+            message += "Append an uncertainty interval to every fault probability to analyze fault propagation."
+
+        end_iter = self.sensitivity_text.get_buffer().get_end_iter()
+        self.sensitivity_text.get_buffer().insert_markup(end_iter, message, -1)
 
 
 def main():

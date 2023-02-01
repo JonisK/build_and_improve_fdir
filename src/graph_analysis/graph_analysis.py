@@ -199,7 +199,7 @@ def create_configuration_space(G, layers):
                     # assembly_names[node] = get_assembly_name(G, node)
                     available = len(list(G.successors(node)))
                     if name.startswith(">="):
-                        required = int(re.findall("\d+", name)[0])
+                        required = int(re.findall(r"\d+", name)[0])
                         # configurations is a list that describes all successors that shall be part of the assembly per configuration
                         # the size should be equivalent to the binomial coefficient available nCr required
                         configuration_list = list(itertools.combinations(range(available), required))
@@ -764,7 +764,7 @@ def get_fault_probability(G, node, equipment_fault_probabilities):
     else:
         if get_node_name(G, node).startswith(">="):
             # sub assembly fails for num_available-num_required+1 faults
-            required = int(re.findall("\d+", get_node_name(G, node))[0])
+            required = int(re.findall(r"\d+", get_node_name(G, node))[0])
             # logging.info(f"Node {get_node_name(G, node)} ({node}) requires {required} operational children out of {len(list(G.successors(node)))}")
             successor_reliabilities = [1 - get_fault_probability(G, successor, equipment_fault_probabilities) for
                                        successor
