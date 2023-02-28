@@ -1,14 +1,16 @@
+import pathlib
 import re
 
 import networkx as nx
 
 from evaluate_mcts_strategy import pick_best_available_action
 from base import remove_unnecessary_nodes, int_to_list, find_successors, find_successor_prob, get_action_name, \
-    no_possible_successors, get_cost, list_to_int
+    no_possible_successors, get_cost, list_to_int, get_action_from_string
 
 
 def export_mcts_strategy(graph, data, statistics, parameters):
     remove_unnecessary_nodes(graph)
+    strategy = {}
 
     print("Exporting strategy to file:", parameters["strategy_file"])
     f = open(parameters["strategy_file"], "w")
@@ -17,14 +19,36 @@ def export_mcts_strategy(graph, data, statistics, parameters):
         if node == 0:
             continue
         action = pick_best_available_action(data, statistics, node)
+        strategy[node] = action
         if action != 0:
             f.write(str(node) + " : " + str(action) + "\n")
     f.close()
+    return strategy
 
 
-def export_graph(mcts_graph, filename):
+def export_graph(mcts_graph, statistics, strategy, filename):
     print("Exporting graph to file:", filename)
     nx.drawing.nx_pydot.write_dot(mcts_graph, filename)
+
+    model_file = open(filename, "w")
+    model_file.write("strict digraph {\n")
+
+    for state in mcts_graph.nodes:
+        if state == 0:
+            continue
+        model_file.write("\t\"" + str(int_to_list(statistics, state)) + "\";\n")
+
+    for state in mcts_graph.nodes:
+        if state == 0 or no_possible_successors(statistics, state):
+            continue
+        action = strategy[state]
+        successor1, successor2 = find_successors(statistics, state, action)
+        # prob1, prob2 = find_successor_prob(statistics, state, action)
+        action_name = get_action_name(statistics, action)
+        model_file.write("\t\"" + str(int_to_list(statistics, state)) + "\"->\"" + str(int_to_list(statistics, successor1)) + "\" [label=\"" + action_name + " Yes\"];\n")
+        model_file.write("\t\"" + str(int_to_list(statistics, state)) + "\"->\"" + str(int_to_list(statistics, successor2)) + "\" [label=\"" + action_name + " No\"];\n")
+    model_file.write("}\n")
+    model_file.close()
 
 
 def vector_to_string(statistics, state, all_equip):
@@ -91,7 +115,7 @@ def export_prism_file(mcts_graph, parameters, statistics, filename):
     prism_state_to_state_mapping = {}
 
     # add variables
-    model_file.write("\ts: [0.." + str(len(mcts_graph.nodes)-1) + "];\n\n")
+    model_file.write("\ts: [0.." + str(len(mcts_graph.nodes) - 1) + "];\n\n")
     # for equip in get_all_equipments():
     #     model_file.write("\t" + equip + ": [0..1];\n")
     # model_file.write("\n")
@@ -145,7 +169,8 @@ def export_prism_file(mcts_graph, parameters, statistics, filename):
         for state in statistics["all_actions"][:-1]:
             prism_state = get_prism_state(state_to_prism_state_mapping, prism_state_to_state_mapping, state)
             model_file.write("(s=" + str(prism_state) + ") | ")
-    prism_state = get_prism_state(state_to_prism_state_mapping, prism_state_to_state_mapping, statistics["all_actions"][-1])
+    prism_state = get_prism_state(state_to_prism_state_mapping, prism_state_to_state_mapping,
+                                  statistics["all_actions"][-1])
     model_file.write("(s=" + str(prism_state) + ")\n")
     model_file.write("endinit")
     model_file.close()

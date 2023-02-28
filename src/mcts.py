@@ -307,7 +307,7 @@ def main():
     # 1: sample a defect and find successor according to that defect
     path_of_src = str(pathlib.Path(__file__).parent.parent.resolve())
     parameters = {"successors_to_keep": 10, "simulations_for_each_children": 200, "sampling_type": 0, "debug": False,
-                  "output_graph": False, "output_dot_file": path_of_src + "temp/mcts_graph.dot",
+                  "output_graph": True, "output_dot_file": path_of_src + "/temp/mcts_graph.dot",
                   "strategy_file": path_of_src + "temp/strategy.txt"}
 
     # process arguments
@@ -322,8 +322,9 @@ def main():
     remove_unnecessary_nodes(graph)
     end_time_mcts = time.time()
 
+    strategy = {}
     if parameters["mcts_strategy"]:
-        export_mcts_strategy(graph, data, stats, parameters)
+        strategy = export_mcts_strategy(graph, data, stats, parameters)
         evaluate_mcts_strategy(data, stats)
     if parameters["evaluate_naive"]:
         evaluate_naive(stats)
@@ -340,12 +341,13 @@ def main():
         start_time_prism = time.time()
         prism_state_to_state_mapping = export_prism_file(graph, parameters, stats, prism_filename)
         end_time_prism = time.time()
-        evaluate_prism_strat.evaluate_prism_strategy(parameters, stats, prism_state_to_state_mapping)
+        strategy, output_state_to_prism_state = evaluate_prism_strat.generate_prism_strat(parameters, stats, prism_state_to_state_mapping)
+        evaluate_prism_strat.evaluate_prism_strategy(parameters, stats, prism_state_to_state_mapping, strategy)
 
     # Exporting stuff
     if parameters["output_graph"]:
         remove_unnecessary_nodes(graph)
-        export_graph(graph, parameters["output_dot_file"])
+        export_graph(graph, stats, strategy, parameters["output_dot_file"])
 
     print("Time taken: ", round(end_time_mcts - start_time_mcts + end_time_prism - start_time_prism, 2), "s")
 

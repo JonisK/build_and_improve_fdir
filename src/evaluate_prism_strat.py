@@ -70,7 +70,7 @@ def export_state_values(statistics, prism_state_to_state_mapping):
     f.close()
 
 
-def evaluate_prism_strategy(parameters, statistics, prism_state_to_state_mapping):
+def generate_prism_strat(parameters, statistics, prism_state_to_state_mapping):
     path_of_prism = str(pathlib.Path(__file__).parent.parent.resolve())
     path_of_src = str(pathlib.Path(__file__).parent.parent.resolve())
     command = path_of_prism + "/prism/bin/prism " + path_of_src + "/temp/model.prism " + path_of_src + "/temp/model.props -prop 1 -explicit -exportstrat " + path_of_src + "/temp/prism_strategy.prism -exportstates " + path_of_src + "/temp/prism_strategy_states.prism -javamaxmem 4g > " + path_of_src + "/temp/prism_output.txt"
@@ -94,6 +94,33 @@ def evaluate_prism_strategy(parameters, statistics, prism_state_to_state_mapping
         action = get_action_from_string(statistics, action_string)
         strategy[state] = action
     strategy_file.close()
+    return strategy, output_state_to_prism_state
+
+
+def evaluate_prism_strategy(parameters, statistics, prism_state_to_state_mapping, strategy):
+    # path_of_prism = str(pathlib.Path(__file__).parent.parent.resolve())
+    # path_of_src = str(pathlib.Path(__file__).parent.parent.resolve())
+    # command = path_of_prism + "/prism/bin/prism " + path_of_src + "/temp/model.prism " + path_of_src + "/temp/model.props -prop 1 -explicit -exportstrat " + path_of_src + "/temp/prism_strategy.prism -exportstates " + path_of_src + "/temp/prism_strategy_states.prism -javamaxmem 4g > " + path_of_src + "/temp/prism_output.txt"
+    # os.system(command)
+    # state_file = open(path_of_src + "/temp/prism_strategy_states.prism", "r")
+    # state_file.readline()
+    # output_state_to_prism_state = {}
+    # for line in state_file:
+    #     x = re.search(r"(\d*):\((\d*)\)", line)
+    #     output_state_to_prism_state[int(x.groups()[0])] = int(x.groups()[1])
+    # state_file.close()
+    #
+    # strategy_file = open(path_of_src + "/temp/prism_strategy.prism", "r")
+    # strategy = {}
+    # for line in strategy_file:
+    #     x = re.search(r"(\d*):(.*)", line)
+    #     output_state = int(x.groups()[0])
+    #     prism_state = output_state_to_prism_state[output_state]
+    #     state = prism_state_to_state_mapping[prism_state]
+    #     action_string = x.groups()[1]
+    #     action = get_action_from_string(statistics, action_string)
+    #     strategy[state] = action
+    # strategy_file.close()
     export_state_values(statistics, prism_state_to_state_mapping)
 
     if parameters["initial_state_file"] == "":
