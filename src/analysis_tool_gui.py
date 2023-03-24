@@ -20,28 +20,42 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from graph_analysis.generate_config_json import generate_config_json_isolation
-from graph_analysis.graph_analysis import create_graph_list, get_layers, \
-    get_node_name, find_root_nodes, find_leaf_nodes, check_isolability, \
-    check_recoverability, get_root_node_names, get_fault_probability, \
-    find_isolated_nodes
-from graph_analysis.sensitivity_analysis import get_sensitivity_analysis, \
-    get_uncertainty_propagation
-import graph_analysis.prism_isolation
-
-import pydot
-import networkx as nx
-import xdot
+# built-in libraries
 import re
 import textwrap
 import logging
 import os
+import subprocess
 
+# Gtk3
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Vte', '2.91')
 from gi.repository import GLib
 from gi.repository import Gtk, Vte
+
+# third-party libraries
+import pydot
+import networkx as nx
+import xdot
+from to_precision import to_precision
+
+
+# project-specific libraries
+from graph_analysis.generate_config_json import generate_config_json_isolation
+from graph_analysis.graph_analysis import create_graph_list, get_layers, \
+    get_node_name, get_node_id, find_root_nodes, find_leaf_nodes, \
+    check_isolability, check_recoverability, get_root_node_names, \
+    get_fault_probability, find_isolated_nodes
+from graph_analysis.sensitivity_analysis import get_sensitivity_analysis, \
+    get_uncertainty_propagation
+from graph_analysis.prism_isolation import generate_prism_model, \
+    generate_props, run_prism, export_strategy, get_configuration_index
+from graph_analysis.run_strategy import get_strategy_graph
+from graph_analysis.isolation_graph import MyDotWidget, add_url_property
+
+
+# from graph_analysis.generate_isolation import traverse_binary_tree_weights, StrategyWriter, get_configuration_lists
 
 
 class MyHandler(logging.Handler):
@@ -66,6 +80,7 @@ class MainWindow(Gtk.Window):
         self.filename = ""
         self.filename_fault_probs = ""
         self.filename_mode_costs = ""
+        self.filename_report = ""
         self.filename_initial_state = ""
         self.G = None
 
@@ -91,6 +106,8 @@ class MainWindow(Gtk.Window):
         self.unique_graph_list = {}
         self.leaf_name_lists = {}
         self.configuration_list = {}
+
+        self.configuration_index = {}
 
         Gtk.Window.__init__(self, title="Analysis Tool")
         self.set_border_width(10)
@@ -137,7 +154,8 @@ class MainWindow(Gtk.Window):
         grid.attach(self.simulations_per_node_label, 0, 6, 1, 1)
         self.simulations_per_node_entry = Gtk.Entry()
         self.simulations_per_node_entry.set_text("10")
-        grid.attach_next_to(self.simulations_per_node_entry, self.simulations_per_node_label, Gtk.PositionType.RIGHT, 1, 1)
+        grid.attach_next_to(self.simulations_per_node_entry, self.simulations_per_node_label, Gtk.PositionType.RIGHT, 1,
+                            1)
 
         self.button_check_isolation = Gtk.Button(label="Check Isolation")
         self.button_check_isolation.connect("clicked", self.check_isolation)
@@ -231,8 +249,6 @@ class MainWindow(Gtk.Window):
         self.notebook.append_page(child=self.page3, tab_label=Gtk.Label(label='Mode Costs'))
 
         # Fourth page, show weakness report
-        self.page4 = Gtk.Box()
-        self.page4.set_border_width(10)
         self.report_text = Gtk.TextView()
         self.report_text.set_editable(False)
         self.get_report_initial()
@@ -241,7 +257,15 @@ class MainWindow(Gtk.Window):
         report_scroller.set_hexpand(True)
         report_scroller.set_vexpand(True)
         report_scroller.add(self.report_text)
-        self.page4.add(report_scroller)
+        report_scroller_box = Gtk.Box()
+        report_scroller_box.add(report_scroller)
+
+        report_save_button = Gtk.Button(label="Save to File")
+        report_save_button.connect('clicked', self.write_report)
+        self.page4 = Gtk.Grid()
+        self.page4.set_border_width(10)
+        self.page4.attach(report_save_button, 0, 0, 1, 1)
+        self.page4.attach(report_scroller_box, 0, 1, 1, 10)
         self.notebook.append_page(child=self.page4, tab_label=Gtk.Label(label='Weakness Report'))
 
         # Fifth page, enter equipment state
@@ -268,13 +292,27 @@ class MainWindow(Gtk.Window):
         self.grid.attach(export_button, 0, 9, 1, 1)
 
         # build isolation per state button
-        build_isolation_per_state_button = Gtk.Button(label="Build")
-        build_isolation_per_state_button.connect("clicked", self.build_prune_and_compress_with_initial_state)
-        self.grid.attach_next_to(build_isolation_per_state_button, export_button, Gtk.PositionType.RIGHT, 1, 1)
+        build_isolation_per_state_button_mcts = Gtk.Button(label="Build via MCTS")
+        build_isolation_per_state_button_mcts.connect("clicked", self.build_prune_and_compress_with_initial_state)
+        self.grid.attach_next_to(build_isolation_per_state_button_mcts, export_button, Gtk.PositionType.RIGHT, 1, 1)
+        build_isolation_per_state_button_mcts_visualize = Gtk.Button(label="Visualize MCTS strategy")
+        build_isolation_per_state_button_mcts_visualize.connect("clicked", self.execute_strategy_action)
+        self.grid.attach_next_to(build_isolation_per_state_button_mcts_visualize, build_isolation_per_state_button_mcts,
+                                 Gtk.PositionType.RIGHT, 1, 1)
+        build_isolation_per_state_button_prism = Gtk.Button(label="Build via PRISM model generation")
+        build_isolation_per_state_button_prism.connect("clicked", self.traverse_graph_with_initial_state)
+        self.grid.attach_next_to(build_isolation_per_state_button_prism,
+                                 build_isolation_per_state_button_mcts_visualize, Gtk.PositionType.RIGHT, 1, 1)
+        build_isolation_per_state_button_prism_visualize = Gtk.Button(label="Visualize PRISM strategy")
+        build_isolation_per_state_button_prism_visualize.connect("clicked", self.execute_strategy_action_isolation)
+        self.grid.attach_next_to(build_isolation_per_state_button_prism_visualize,
+                                 build_isolation_per_state_button_prism,
+                                 Gtk.PositionType.RIGHT, 1, 1)
+
         self.notebook.append_page(child=self.page5, tab_label=Gtk.Label(label='Enter State'))
 
         # Sixth page, xdot view of the isolation graph
-        self.page6 = xdot.DotWidget()
+        self.page6 = MyDotWidget()
         self.notebook.append_page(child=self.page6, tab_label=Gtk.Label(label='Isolation graph'))
 
         # Seventh page, sensitivity table
@@ -336,12 +374,27 @@ class MainWindow(Gtk.Window):
 
         paned.add2(self.terminal_notebook)
 
-    def on_analyze(self, action):
-        self.button_analyze.set_sensitive(False)
-        self.terminal_notebook.set_current_page(1)
-        self.analyze_graph(self.G)
-        self.get_graph_stats(self.filename, self.G)
-        self.scroll_down2()
+    def clear_variables(self):
+        self.isolable = []
+        self.non_isolable = []
+        self.num_non_isolable = 0
+        self.isolation_cost = {}
+
+        self.recoverable = []
+        self.non_recoverable = []
+        self.num_non_recoverable = 0
+        self.recovery_cost = {}
+
+        self.G = None
+        self.all_equipment = []
+        self.unique_graph_list = {}
+        self.leaf_name_lists = {}
+        self.configuration_list = {}
+
+        self.configuration_index = {}
+
+        self.page6.set_graph_and_all_equipment(self.G, self.all_equipment)
+        self.page6.set_leaf_name_and_configuration_list(self.leaf_name_lists, self.configuration_list)
 
     def on_open(self, action):
         chooser = Gtk.FileChooserDialog(parent=self,
@@ -368,7 +421,16 @@ class MainWindow(Gtk.Window):
             chooser.destroy()
             self.filename_fault_probs = self.filename.split(".")[0] + "_fault_probabilities.txt"
             self.filename_mode_costs = self.filename.split(".")[0] + "_mode_costs.txt"
+            self.filename_report = self.filename.split(".")[0] + "_report.txt"
             self.filename_initial_state = self.filename.split(".")[0] + "_initial_state.txt"
+
+            # Reset variables
+            self.clear_variables()
+            self.analysis_done = False
+            self.check_isolability_done = False
+            self.export_isolation_done = False
+            self.check_recoverability_done = False
+            self.export_recovery_done = False
 
             # Reset buttons
             self.button_analyze.set_sensitive(True)
@@ -378,13 +440,8 @@ class MainWindow(Gtk.Window):
             self.button_check_recovery.set_sensitive(False)
             self.button_build_recovery.set_sensitive(False)
             self.button_export_recovery.set_sensitive(False)
-            self.get_report_initial()
-            self.analysis_done = False
-            self.check_isolability_done = False
-            self.export_isolation_done = False
-            self.check_recoverability_done = False
-            self.export_recovery_done = False
 
+            self.get_report_initial()
             self.open_file(self.filename, self.page1)
             self.page1.zoom_to_fit()
             self.get_graph_stats_filename(self.filename)
@@ -425,6 +482,7 @@ class MainWindow(Gtk.Window):
 
         layers = get_layers(self.G)
         self.all_equipment = sorted([get_node_name(self.G, node) for node in find_leaf_nodes(self.G, layers)])
+        self.page6.set_graph_and_all_equipment(self.G, self.all_equipment)
         logging.info(f"All equipment: {[(index, component) for index, component in enumerate(self.all_equipment)]}")
         self.scroll_down2()
 
@@ -452,12 +510,21 @@ class MainWindow(Gtk.Window):
             + f" - {len(find_leaf_nodes(G, layers))} components\n"
             + f" - {min(num_configs)} to {max(num_configs)} configurations per mode\n")
 
+    def on_analyze(self, action):
+        self.button_analyze.set_sensitive(False)
+        self.terminal_notebook.set_current_page(1)
+        self.analyze_graph(self.G)
+        self.get_graph_stats(self.filename, self.G)
+        self.scroll_down2()
+
     def analyze_graph(self, G):
         logging.info("Analyze the configuration graph")
         threading = True
         self.unique_graph_list, unique_node_lists, self.leaf_name_lists, \
             self.configuration_list, configuration_space = \
             create_graph_list(G, threading)
+        self.page6.set_leaf_name_and_configuration_list(self.leaf_name_lists,
+                                                        self.configuration_list)
 
         # set button states
         self.button_check_isolation.set_sensitive(True)
@@ -470,6 +537,9 @@ class MainWindow(Gtk.Window):
         self.get_report()
         self.get_sensitivity()
         self.scroll_down2()
+
+        logging.info(f"{configuration_space=}")
+        logging.info(f"layers={get_layers(self.G)}")
 
     def reset_check_buttons(self, widget):
         if self.analysis_done:
@@ -489,7 +559,7 @@ class MainWindow(Gtk.Window):
         num_isolable = len(self.all_equipment) - self.num_non_isolable
         self.isolation_info.set_markup(
             f"<b><big>Isolation info</big></b>\n"
-            + f" - {num_isolable} components ({100*(num_isolable/len(self.all_equipment)):.2f}%) can be isolated\n"
+            + f" - {num_isolable} components ({to_precision(100 * (num_isolable / len(self.all_equipment)), 3, notation='std')}%) can be isolated\n"
             + f" - {self.num_non_isolable} components cannot be isolated\n")
         self.check_isolability_done = True
         self.get_report()
@@ -502,70 +572,18 @@ class MainWindow(Gtk.Window):
         self.feed_input(f'\n')
         generate_config_json_isolation(
             self.all_equipment,
-            self.base_directory + "/temp/",
-            self.base_directory + "/temp/prism_strategy_config.json")
+            self.base_directory + "temp/",
+            self.base_directory + "temp/prism_strategy_config.json")
         strategy_name = 'temp/prism_strategy.prism'
         self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
 
     def prune_graph(self, button):
         self.feed_input(f'python3 src/mcts.py '
-            f'--modecosts {self.filename_mode_costs} '
-            f'--equipfailprobs {self.filename_fault_probs} '
-            f'--successorstokeep {self.children_to_keep_entry.get_text()} '
-            f'--simulationsize {self.simulations_per_node_entry.get_text()} '
-            f'{self.filename}\n')
-
-    def build_prune_and_compress_with_initial_state(self, button):
-        # self.button_build_isolation.set_sensitive(False)
-        self.terminal_notebook.set_current_page(0)
-        self.prune_graph_with_initial_state(button)
-        self.feed_input(f'\n')
-        # generate_config_json_isolation(
-        #     self.all_equipment,
-        #     self.base_directory + "/temp/",
-        #     self.base_directory + "/temp/prism_strategy_config.json")
-        # strategy_name = 'temp/prism_strategy.prism'
-        # self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
-
-    def prune_graph_with_initial_state(self, button):
-        self.feed_input(f'python3 src/mcts.py '
-            f'--modecosts {self.filename_mode_costs} '
-            f'--equipfailprobs {self.filename_fault_probs} '
-            f'--successorstokeep {self.children_to_keep_entry.get_text()} '
-            f'--simulationsize {self.simulations_per_node_entry.get_text()} '
-            f'--initialstatefile {self.filename_initial_state} '
-            f'--debug '
-            f'{self.filename}\n')
-
-        self.feed_input(f'\n')
-        generate_config_json_isolation(
-            self.all_equipment,
-            self.base_directory + "/temp/",
-            self.base_directory + "/temp/prism_strategy_config.json")
-        strategy_name = 'temp/prism_strategy.prism'
-
-        # Generate decision tree for initial state
-        self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
-
-        # Show decision tree on page 6
-        self.open_file(self.base_directory + "/decision_trees/avg/prism_strategy/avg.dot", self.page6)
-        self.page6.zoom_to_fit()
-
-    # def prune_graph_with_initial_state(self, button):
-    #     self.terminal_notebook.set_current_page(1)
-    #
-    #     configuration_lists = get_configuration_lists(self.leaf_name_lists, self.all_equipment)
-    #
-    #     strategy_filename = self.directory + "/../../temp/strategy_initial.prism"
-    #     states_filename = self.directory + "/../../temp/strategy_initial_states.prism"
-    #     writer = StrategyWriter(states_filename, strategy_filename)
-    #     writer.write_header(self.all_equipment)
-    #
-    #     equipment_state = [1 if self.equipment_liststore[state][1] == "available" else 0 \
-    #                        for state in range(len(self.all_equipment))]
-    #
-    #     traverse_binary_tree_weights(self.G, configuration_lists, equipment_state, self.get_costs(), writer, verbose=False)
-    #     writer.close()
+                        f'--modecosts {self.filename_mode_costs} '
+                        f'--equipfailprobs {self.filename_fault_probs} '
+                        f'--successorstokeep {self.children_to_keep_entry.get_text()} '
+                        f'--simulationsize {self.simulations_per_node_entry.get_text()} '
+                        f'{self.filename}\n')
 
     def ready(self, pty, task):
         pass
@@ -581,26 +599,33 @@ class MainWindow(Gtk.Window):
 
     def export_isolation(self, button):
         self.button_export_isolation.set_sensitive(False)
-        graph_analysis.prism_isolation.generate_prism_model(
+        self.configuration_index = generate_prism_model(
+            self.base_directory,
             self.base_directory + "temp/" + "isolation_model.prism",
             self.G,
             self.all_equipment,
             self.unique_graph_list,
             self.leaf_name_lists,
             self.configuration_list,
-            self.get_probabilities(),
+            self.get_probabilities(probabilities_type="mean"),
             self.get_costs(),
+            hidden_variable=False,
             debug=False)
 
-        graph_analysis.prism_isolation.generate_props(
-            self.base_directory + "temp/" + "isolation_model.prism",
-            self.all_equipment)
+        # generate_props(
+        #     self.base_directory + "temp/" + "isolation_model.prism",
+        #     self.all_equipment)
+        generate_props(self.base_directory,
+                       self.base_directory + "temp/" + "isolation_model.prism",
+                       self.all_equipment)
         self.export_isolation_done = True
-            
+
     def run_isolation(self, button):
-        isolability, self.isolation_cost = graph_analysis.prism_isolation.run_prism(
+        isolability, self.isolation_cost = run_prism(
+            self.base_directory,
             self.base_directory + "temp/" + "isolation_model.prism",
-            self.all_equipment)
+            self.all_equipment,
+            components="all")
         self.run_isolation_done = True
         self.get_report()
 
@@ -617,7 +642,7 @@ class MainWindow(Gtk.Window):
         num_recoverable = len(self.leaf_name_lists) - self.num_non_recoverable
         self.recovery_info.set_markup(
             f"<b><big>Recovery info</big></b>\n"
-            + f" - {num_recoverable} modes ({100*(num_recoverable/len(self.leaf_name_lists)):.2f}%) are fault-tolerant\n"
+            + f" - {num_recoverable} modes ({to_precision(100 * (num_recoverable / len(self.leaf_name_lists)), 3, notation='std')}%) are fault-tolerant\n"
             + f" - {self.num_non_recoverable} modes are not fault-tolerant\n")
         self.check_recoverability_done = True
         self.get_report()
@@ -684,23 +709,24 @@ class MainWindow(Gtk.Window):
             lower_bound = {}
             upper_bound = {}
         for line in probabilities_text.split("\n"):
-            item = re.search(r"([a-zA-Z0-9_-]*)\s*:"    # name
-                             r"\s*([0-9.]*),?\s*"       # mean fault probability
-                             r"\[?([0-9.]*),?\s*"       # lower bound of uncertainty interval
-                             r"([0-9.]*)\]?",           # upper bound of uncertainty interval
+            item = re.search(r"([a-zA-Z0-9_-]*)\s*:"  # name
+                             r"\s*([0-9.]*),?\s*"  # mean fault probability
+                             r"\[?([0-9.]*),?\s*"  # lower bound of uncertainty interval
+                             r"([0-9.]*)\]?",  # upper bound of uncertainty interval
                              line)
-            if item.group(1) and item.group(2):
-                mean_probabilities[item.group(1)] = float(item.group(2))
-            if probabilities_type == "all" and item.group(3) and item.group(4):
-                lower_bound[item.group(1)] = float(item.group(3))
-                upper_bound[item.group(1)] = float(item.group(4))
+            if item:
+                if item.group(1) and item.group(2):
+                    mean_probabilities[item.group(1)] = float(item.group(2))
+                if probabilities_type == "all" and item.group(3) and item.group(4):
+                    lower_bound[item.group(1)] = float(item.group(3))
+                    upper_bound[item.group(1)] = float(item.group(4))
         # logging.info(f"{mean_probabilities=}")
         if probabilities_type == "all":
             return mean_probabilities, lower_bound, upper_bound
         else:
             return mean_probabilities
 
-        #return {line.split(":")[0]: float(line.split(":")[1]) for line in probabilities_text.split(",\n")}
+        # return {line.split(":")[0]: float(line.split(":")[1]) for line in probabilities_text.split(",\n")}
 
     def read_costs(self):
         try:
@@ -718,10 +744,18 @@ class MainWindow(Gtk.Window):
         costs_text = self.mode_costs_text.get_buffer().get_text(
             self.mode_costs_text.get_buffer().get_start_iter(),
             self.mode_costs_text.get_buffer().get_end_iter(), False)
-        # logging.info(costs_text.split("\n"))
         for line in costs_text.split("\n"):
-            # logging.info(f"{line=}")
-            mode_costs[re.findall(r"\w+(?=:)", line)[0]] = float(re.findall(r"\d+.\d+", line)[0])
+            item = re.search(r"([a-zA-Z0-9_-]*)\s*:"  # name
+                             r"\s*([0-9.]*),?\s*",  # cost
+                             line)
+            if item:
+                if item.group(1) and item.group(2):
+                    mode_costs[item.group(1)] = item.group(2)
+
+        # logging.info(costs_text.split("\n"))
+        # for line in costs_text.split("\n"):
+        #     # logging.info(f"{line=}")
+        #     mode_costs[re.findall(r"\w+(?=:)", line)[0]] = float(re.findall(r"\d+.\d+", line)[0])
         # logging.info(f"{mode_costs=}")
         return mode_costs
 
@@ -786,16 +820,17 @@ class MainWindow(Gtk.Window):
         if self.analysis_done:
             message += f"Assuming the component fault probabilities defined in ‘{self.filename_fault_probs.split('/')[-1]}’, the modes have these fault probabilities:\n"
 
-            fault_probs = {mode: get_fault_probability(self.G, mode, self.get_probabilities(probabilities_type="mean")) for mode in find_root_nodes(self.G)}
+            fault_probs = {mode: get_fault_probability(self.G, mode, self.get_probabilities(probabilities_type="mean"))
+                           for mode in find_root_nodes(self.G)}
             fault_probs_sorted = dict(sorted(fault_probs.items(), key=lambda item: item[1], reverse=True))
             for mode in fault_probs_sorted:
-                message += f"\tThe fault probability for mode {get_node_name(self.G, mode)} is {100 * fault_probs_sorted[mode]:.5f} %\n"
+                message += f"\tThe fault probability for mode {get_node_name(self.G, mode)} is {to_precision(100 * fault_probs_sorted[mode], 3)} %\n"
 
         if self.run_isolation_done:
             message += f"\nCost for the isolation of the components:\n"
             for component, cost in sorted(self.isolation_cost.items(), key=lambda item: item[1], reverse=True):
                 if cost < float('inf'):
-                    message += f"\tThe cost for isolating {component} is {cost}.\n"
+                    message += f"\tThe cost for isolating {component} is {to_precision(cost, 4)}.\n"
             for component, cost in self.isolation_cost.items():
                 if cost == float('inf'):
                     message += f"\t{component} is not isolable. No cost can be calculated.\n"
@@ -804,6 +839,12 @@ class MainWindow(Gtk.Window):
 
         end_iter = self.report_text.get_buffer().get_end_iter()
         self.report_text.get_buffer().insert_markup(end_iter, message, -1)
+
+    def write_report(self, button):
+        with open(self.filename_report, 'w') as file_ref:
+            file_ref.write(self.report_text.get_buffer().get_text(
+                self.report_text.get_buffer().get_start_iter(),
+                self.report_text.get_buffer().get_end_iter(), False))
 
     def initialize_liststore(self, all_equipment):
         # Creating the ListStore model
@@ -855,6 +896,190 @@ class MainWindow(Gtk.Window):
         with open(self.filename_initial_state, 'w') as file_ref:
             file_ref.write(str(equipment_state))
 
+    def get_initial_state(self):
+        initial_state = {component: self.equipment_liststore[index][1] for index, component in
+                         enumerate(self.all_equipment)}
+        return initial_state
+
+    def build_prune_and_compress_with_initial_state(self, button):
+        # self.button_build_isolation.set_sensitive(False)
+        self.terminal_notebook.set_current_page(0)
+        self.prune_graph_with_initial_state(button)
+        self.feed_input(f'\n')
+
+    def prune_graph_with_initial_state(self, button):
+        self.feed_input(f'python3 src/mcts.py '
+                        f'--modecosts {self.filename_mode_costs} '
+                        f'--equipfailprobs {self.filename_fault_probs} '
+                        f'--successorstokeep {self.children_to_keep_entry.get_text()} '
+                        f'--simulationsize {self.simulations_per_node_entry.get_text()} '
+                        f'--initialstatefile {self.filename_initial_state} '
+                        f'--debug '
+                        f'{self.filename}\n')
+
+        self.feed_input(f'\n')
+        generate_config_json_isolation(
+            self.all_equipment,
+            self.base_directory + "temp/",
+            self.base_directory + "temp/prism_strategy_config.json")
+        strategy_name = 'temp/prism_strategy.prism'
+
+        # Generate decision tree for initial state
+        self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
+
+        # Show decision tree on page 6
+        self.open_file(self.base_directory + "/decision_trees/avg/prism_strategy/avg.dot", self.page6)
+        self.page6.zoom_to_fit()
+
+    def execute_strategy_action(self, button):
+        # Compile decision tree
+        tree_filename = self.base_directory + "temp/avg.o"
+        args = f"gcc -shared -fPIC {self.base_directory}decision_trees/avg/prism_strategy/avg.c -o {tree_filename}"
+        result = subprocess.run(args.split(" "), stdout=subprocess.PIPE, text=True)
+
+        strategy_filename = self.base_directory + "temp/prism_strategy.prism"
+        initial_state = self.get_initial_state()
+        graph_filename = self.base_directory + "temp/fault_isolation.dot"
+        get_strategy_graph(self.G, self.leaf_name_lists, None, tree_filename, strategy_filename,
+                           initial_state, self.all_equipment,
+                           graph_filename)
+
+        # Show decision tree on page 6
+        self.open_file(graph_filename, self.page6)
+        self.page6.zoom_to_fit()
+
+    def traverse_graph_with_initial_state(self, button):
+        # self.terminal_notebook.set_current_page(1)
+        #
+        # configuration_lists = get_configuration_lists(self.leaf_name_lists, self.all_equipment)
+        #
+        # strategy_filename = self.directory + "/../../temp/strategy_initial.prism"
+        # states_filename = self.directory + "/../../temp/strategy_initial_states.prism"
+        # writer = StrategyWriter(states_filename, strategy_filename)
+        # writer.write_header(self.all_equipment)
+        #
+        # equipment_state = [1 if self.equipment_liststore[state][1] == "available" else 0 \
+        #                    for state in range(len(self.all_equipment))]
+        #
+        # traverse_binary_tree_weights(self.G, configuration_lists, equipment_state, self.get_costs(), writer, verbose=False)
+        # writer.close()
+
+        logging.info("Generate PRISM model of isolation")
+        hidden_variable = True
+        self.configuration_index = generate_prism_model(
+            self.base_directory,
+            self.filename,
+            self.G,
+            self.all_equipment,
+            self.unique_graph_list,
+            self.leaf_name_lists,
+            self.configuration_list,
+            self.get_probabilities(probabilities_type="mean"),
+            self.get_costs(),
+            hidden_variable,
+            debug=False)
+        logging.info("Generate another PRISM model for debugging with the PRISM simulator")
+        generate_prism_model(
+            self.base_directory,
+            self.filename,
+            self.G,
+            self.all_equipment,
+            self.unique_graph_list,
+            self.leaf_name_lists,
+            self.configuration_list,
+            self.get_probabilities(probabilities_type="mean"),
+            self.get_costs(),
+            hidden_variable,
+            debug=True)
+
+        logging.info("Generate properties file")
+        generate_props(self.base_directory, self.filename, self.all_equipment)
+
+        logging.info("Check model and export isolation strategy")
+        self.terminal_notebook.set_current_page(0)
+        # result = export_strategy(self.base_directory, self.filename)
+        # logging.info(result.stdout)
+        # export_strategy(self.base_directory, self.filename, self.feed_input)
+        # for component in self.all_equipment + ['any']:
+        # for component in ['any']:
+        #     export_strategy(self.base_directory, self.filename, self.feed_input, component)
+
+        logging.info("Generate config JSON for dtControl")
+        # trimmed_filename = self.filename.split('/')[-1].split('.')[0]
+        work_directory = self.base_directory + "temp/"
+        # generate_config_json_isolation(
+        #     self.all_equipment,
+        #     work_directory,
+        #     work_directory + trimmed_filename + "_config.json")
+        # for component in self.all_equipment + ['any']:
+        for component in ['any', 'sparse']:
+            trimmed_filename = "strategy_" + self.filename.split('/')[-1].split('.')[0] + "_" + component
+            generate_config_json_isolation(
+                self.all_equipment,
+                work_directory,
+                work_directory + trimmed_filename + "_config.json",
+                hidden_variable)
+
+        logging.info("Compress strategy with dtControl")
+        self.terminal_notebook.set_current_page(0)
+        # self.feed_input(f'dtcontrol --input {work_directory}strategy_{trimmed_filename}.prism --use-preset avg --benchmark-file benchmark.json --rerun\n')
+        # for component in self.all_equipment + ['any']:
+        for component in ['sparse']:
+            trimmed_filename = "strategy_" + self.filename.split('/')[-1].split('.')[0] + "_" + component
+            self.feed_input(
+                f'dtcontrol --input {work_directory + trimmed_filename}.prism --use-preset avg --benchmark-file benchmark.json --rerun\n')
+
+    def execute_strategy_action_isolation(self, button):
+        trimmed_filename = self.filename.split('/')[-1].split('.')[0]
+        work_directory = self.base_directory + "temp/"
+
+        logging.info("Compile decision tree")
+        # tree_filename = work_directory + "avg.o"
+        # args = f"gcc -shared -fPIC {work_directory}decision_trees/avg/strategy_{trimmed_filename}/avg.c -o {tree_filename}"
+        # logging.info(f"Command: {args}")
+        # result = subprocess.run(args.split(" "), stdout=subprocess.PIPE, text=True)
+        # logging.info(result.stdout)
+        # for component in self.all_equipment + ['any', 'trivial']:
+        for component in ['sparse']:
+            trimmed_filename = self.filename.split('/')[-1].split('.')[0] + "_" + component
+            tree_filename = work_directory + f"isolator_{component}.o"
+            self.terminal_notebook.set_current_page(0)
+            self.feed_input(
+                f"gcc -shared -fPIC {self.base_directory}decision_trees/avg/strategy_{trimmed_filename}/avg.c -o {tree_filename}\n")
+
+        logging.info("Execute decision tree for initial state")
+        self.configuration_index = get_configuration_index(self.G, self.unique_graph_list, self.leaf_name_lists,
+                                                           self.configuration_list,
+                                                           self.get_probabilities(probabilities_type="mean"),
+                                                           self.get_costs())
+        logging.info(f"{self.configuration_index=}")
+
+        # strategy_filename = f"{work_directory}strategy_{trimmed_filename}.prism"
+        # initial_state = self.get_initial_state()
+        # graph_filename = f"{work_directory}fault_isolation.dot"
+        # get_strategy_graph(self.G, self.leaf_name_lists, self.configuration_index, tree_filename, strategy_filename,
+        #                    initial_state,
+        #                    graph_filename)
+        custom_list = self.all_equipment.copy()
+        custom_list.remove('gyro_1')
+        custom_list.remove('gyro_2')
+        # for component in self.all_equipment + ['any', 'trivial']:
+        # for component in custom_list:
+        for component in ['sparse']:
+            tree_filename = work_directory + f"isolator_{component}.o"
+            trimmed_filename = self.filename.split('/')[-1].split('.')[0] + "_" + component
+            strategy_filename = f"{work_directory}strategy_{trimmed_filename}.prism"
+            initial_state = self.get_initial_state()
+            graph_filename = f"{work_directory}fault_isolation_{component}.dot"
+            get_strategy_graph(self.G, self.leaf_name_lists, self.configuration_index, tree_filename, strategy_filename,
+                               initial_state, self.all_equipment,
+                               graph_filename)
+
+        # Show decision tree on page 6
+        self.notebook.set_current_page(5)
+        self.open_file(graph_filename, self.page6)
+        self.page6.zoom_to_fit()
+
     def get_sensitivity_initial(self):
         # Clear textview
         self.sensitivity_text.get_buffer().delete(
@@ -874,8 +1099,11 @@ class MainWindow(Gtk.Window):
         message = get_sensitivity_analysis(self.G, self.get_probabilities(probabilities_type="mean"), self.get_costs())
         message += "\n\n\n"
         if self.check_all_probabilities_present():
-            equipment_fault_probabilities, equipment_fault_probabilities_lower_bound, equipment_fault_probabilities_upper_bound = self.get_probabilities(probabilities_type="all")
-            message += get_uncertainty_propagation(self.G, equipment_fault_probabilities, equipment_fault_probabilities_lower_bound, equipment_fault_probabilities_upper_bound, self.get_costs())
+            equipment_fault_probabilities, equipment_fault_probabilities_lower_bound, equipment_fault_probabilities_upper_bound = self.get_probabilities(
+                probabilities_type="all")
+            message += get_uncertainty_propagation(self.G, equipment_fault_probabilities,
+                                                   equipment_fault_probabilities_lower_bound,
+                                                   equipment_fault_probabilities_upper_bound, self.get_costs())
         else:
             message += "Append an uncertainty interval to every fault probability to analyze fault propagation."
 
@@ -894,7 +1122,15 @@ def main():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     handler = MyHandler(window.log_output)
-    #logger.addHandler(handler)
+    # logger.addHandler(handler)
+
+    # graph_filename = "/home/jonis/git/build_and_improve_fdir/temp/sample_graph.dot"
+    # dotcode = add_url_property(graph_filename)
+    # with open(graph_filename + ".dot", 'w') as output:
+    #     print(dotcode, file=output)
+    # # window.open_file(graph_filename, window.page6)
+    # window.page6.set_dotcode(bytes(dotcode, encoding='utf8'))
+    # window.page6.zoom_to_fit()
 
     Gtk.main()
 

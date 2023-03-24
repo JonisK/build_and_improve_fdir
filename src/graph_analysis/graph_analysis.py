@@ -260,87 +260,6 @@ def get_predecessors_inside_removal_range(G, node, nodes_to_be_deleted):
     return predecessors_inside_removal_range
 
 
-def check_for_upstream_dependencies(G, nodes_to_be_deleted, root_node, predecessor):
-    try:
-        for node in nodes_to_be_deleted:
-            logging.debug(
-                f"[{get_node_name(G, root_node)}] Check node {node} ({get_node_name(G, node)}) "
-                f"that is about to be deleted")
-            if len(list(G.predecessors(node))) > 1 and get_predecessors_outside_removal_range(G, node,
-                                                                                              nodes_to_be_deleted):
-                # if there are nodes that we want to delete but that other branches depend on, we will
-                # not delete those but delete the connecting edges so we can show that our branch does
-                # not depend on them
-                logging.debug(
-                    f"[{get_node_name(G, root_node)}] Node {node} ({get_node_name(G, node)}) "
-                    f"has {str(len(list(G.predecessors(node))))} predecessors and some of "
-                    f"them are outside the range of nodes we intend to delete")
-                logging.debug(
-                    f"[{get_node_name(G, root_node)}] Therefore, we will not delete: "
-                    f"{list(nx.bfs_tree(G, node, reverse=False))}")
-                logging.debug(
-                    f"[{get_node_name(G, root_node)}] But we will delete the edge from "
-                    f"{get_predecessors_inside_removal_range(G, node, nodes_to_be_deleted)} "
-                    f"to the node(s) {list(nx.bfs_tree(G, node, reverse=False))}. "
-                    f"And we will also delete the edge from {predecessor} "
-                    f"to the node(s) {list(nx.bfs_tree(G, node, reverse=False))}")
-                for node_to_keep in list(nx.bfs_tree(G, node, reverse=False)):
-                    if node_to_keep in nodes_to_be_deleted:
-                        nodes_to_be_deleted.remove(node_to_keep)
-                        # remove edges between the nodes we want to keep and the nodes that will be deleted
-                        for predecessor_inside_removal_range in get_predecessors_inside_removal_range(G, node,
-                                                                                                      nodes_to_be_deleted):
-                            try:
-                                G.remove_edge(predessor_inside_removal_range, node_to_keep)
-                            except:
-                                logging.warning((
-                                    f"[{get_node_name(G, root_node)}] Could not find edge from "
-                                    f"{predecessor_inside_removal_range} ({get_node_name(G, predecessor_inside_removal_range)}) "
-                                    f"to {node_to_keep} ({get_node_name(G, node_to_keep)}). Skipping"))
-                        # remove edge from the predecessor, i.e. the disjunctive node, to the node we want to keep
-                        try:
-                            G.remove_edge(predecessor, node_to_keep)
-                        except:
-                            logging.warning((
-                                f"[{get_node_name(G, root_node)}] Could not find edge from "
-                                f"{predecessor} ({get_node_name(G, predecessor)}) "
-                                f"to {node_to_keep} ({get_node_name(G, node_to_keep)}). Skipping"))
-                    else:
-                        logging.debug((
-                            f"[{get_node_name(G, root_node)}] Node {node} ({get_node_name(G, node)}) "
-                            f"is not about to be deleted. Skipping..."))
-            elif len(list(G.predecessors(node))) > 1 and not predecessors_outside_removal_range(G, node,
-                                                                                                nodes_to_be_deleted):
-                logging.debug((
-                    f"[{get_node_name(G, root_node)}] Node {node} ({get_node_name(G, node)}) "
-                    f"has {str(len(list(G.predecessors(node))))} predecessors but they all "
-                    f"lie in the range of nodes we are about to delete"))
-                logging.debug(
-                    f"[{get_node_name(G, root_node)}] Therefore, we will delete: "
-                    f"{list(nx.bfs_tree(G, node, reverse=False))}")
-            elif len(list(G.predecessors(node))) == 0:
-                logging.warning((
-                    f"[{get_node_name(G, root_node)}] That's strange. Node {node} ({get_node_name(G, node)}) "
-                    f"has no predecessors"))
-            else:
-                logging.debug((
-                    f"[{get_node_name(G, root_node)}] The node has just one predecessor and will "
-                    f"be deleted"))
-            logging.debug((
-                f"[{get_node_name(G, root_node)}] New state of node_to_be_deleted: {nodes_to_be_deleted}"))
-        return nodes_to_be_deleted, G
-    except ValueError:
-        logging.info(ValueError)
-
-    # go through the graph and delete all disjunctive nodes
-    inv_subgraph = subgraph.copy()
-    for assembly in configurations:
-        inv_subgraph.remove_node(assembly)
-    # then search for the remaining sub-graph accessible from the root
-    # the nodes of this subgraph are not affected by the configurations
-    invariant_nodes = set(nx.bfs_tree(inv_subgraph, root_node, reverse=False))
-
-
 def create_graph(G, root_node, node_list, invariant_nodes, configuration_space, permutation, current_index,
                  all_permutations, fetcher):
     logging.debug(f"Create graphs for {permutation}")
@@ -420,50 +339,6 @@ def create_graph(G, root_node, node_list, invariant_nodes, configuration_space, 
 
     logging.debug(f"Finished graph for {permutation}. Adding it to the list")
     fetcher.add_permutation(root_node, new_G, list(nx.bfs_tree(new_G, root_node, reverse=False)))
-
-    # new_G = G.copy()
-    # for node in G:
-    #     if not node in node_list:
-    #         new_G.remove_node(node)
-    # for node in node_list:
-    #     # for node in list(nx.bfs_tree(new_G, root_node, reverse=True))[::-1]:
-    #     attr = new_G.nodes[node]
-    #     # logging.info(attr)
-    #
-    #     # remove the other options
-    #     if 'xlabel' in attr:
-    #         name = attr['xlabel'].strip('\"')
-    #         # if we are at a disjunctive node, find the configuration for it
-    #         if name.startswith(">=") or name.startswith("OR"):
-    #             logging.debug(f"We are at disjunctive node {node} and about "
-    #                           f"to apply configuration {permutation[node]}")
-    #             # find the nodes we want to delete in the permutation
-    #             candidates = list(new_G.successors(node))
-    #             roots_to_be_deleted = candidates.copy()
-    #             for index in permutation[node]:
-    #                 roots_to_be_deleted.remove(candidates[index])
-    #             logging.debug(f"We want to delete the successors {roots_to_be_deleted} and their children")
-    #
-    #             nodes_to_be_deleted = set()
-    #             for root_to_be_deleted in roots_to_be_deleted:
-    #                 nodes_to_be_deleted.update(list(nx.bfs_tree(new_G, root_to_be_deleted, reverse=False)))
-    #             # find the nodes that
-    #             logging.debug(
-    #                 f"[{get_node_name(G, root_node)}] "
-    #                 f"[{current_index + 1}/{all_permutations}] "
-    #                 f"Nodes to be deleted before checking for upstream "
-    #                 f"dependencies: {nodes_to_be_deleted}")
-    #             nodes_to_be_deleted, new_G = check_for_upstream_dependencies(
-    #                 new_G, list(nodes_to_be_deleted), root_node, node)
-    #             logging.debug(
-    #                 f"[{get_node_name(G, root_node)}] "
-    #                 f"[{current_index + 1}/{all_permutations}] "
-    #                 f"Nodes to be deleted after  checking for upstream "
-    #                 f"dependencies: {nodes_to_be_deleted}")
-    #             for node_to_be_deleted in nodes_to_be_deleted:
-    #                 new_G.remove_node(node_to_be_deleted)
-    # logging.info(f"Finished graph for {permutation}. Adding it to the list")
-    # fetcher.add_permutation(new_G, list(nx.bfs_tree(new_G, root_node, reverse=False)))
 
 
 # create n graphs for every permutation
@@ -564,7 +439,7 @@ def create_graph_list_per_root_node(G, root_node, list_fetcher, threading):
         if not node in node_list:
             subgraph.remove_node(node)
     layers = get_layers(subgraph)
-    logging.debug(f"[{get_node_name(subgraph, root_node)}] {layers=}")
+    logging.info(f"[{get_node_name(subgraph, root_node)}] {layers=}")
     logging.debug(f"{node_list=}")
     if len(node_list) <= 1:
         logging.warning(
@@ -576,7 +451,6 @@ def create_graph_list_per_root_node(G, root_node, list_fetcher, threading):
     logging.debug(f"[{get_node_name(subgraph, root_node)}] Configurations: {configurations}")
     logging.debug(f"[{get_node_name(subgraph, root_node)}] Configuration space: {configuration_space_per_root_node}")
     permutations = create_permutations(configurations)
-    # permutations = [{'N58': (0,), 'N26': (0,), 'N71': (0,)}]
     logging.debug(f"{len(permutations)=}")
 
     # determine the set of nodes not affected by the configurations
@@ -601,13 +475,15 @@ def create_graph_list_per_root_node(G, root_node, list_fetcher, threading):
 
     graph_list, node_lists = create_graphs(subgraph, root_node, node_list, invariant_nodes,
                                            configuration_space_per_root_node, permutations, threading)
-    unique_graph_list_per_root_node, unique_node_lists_per_root_node, configuration_list_per_root_node = remove_duplicates(
-        graph_list,
-        node_lists,
-        permutations,
-        root_node)
+    unique_graph_list_per_root_node, \
+        unique_node_lists_per_root_node, \
+        configuration_list_per_root_node = remove_duplicates(graph_list,
+                                                             node_lists,
+                                                             permutations,
+                                                             root_node)
     leaf_name_lists_per_root_node = []
-    for unique_graph, permutation_node_list in zip(unique_graph_list_per_root_node, unique_node_lists_per_root_node):
+    for unique_graph, permutation_node_list in zip(unique_graph_list_per_root_node,
+                                                   unique_node_lists_per_root_node):
         permutation_graph = subgraph.copy()
         for node in subgraph:
             if not node in permutation_node_list:
@@ -616,7 +492,8 @@ def create_graph_list_per_root_node(G, root_node, list_fetcher, threading):
         # logging.debug(f"Graph node names: {[get_node_name(new_G, node) for node in new_G]}")
         # logging.debug(f"Leaf nodes: {find_leaf_nodes(new_G)}")
         leaf_name_lists_per_root_node.append(
-            sorted([get_node_name(subgraph, node) for node in find_leaf_nodes(unique_graph, type='components')]))
+            sorted([get_node_name(subgraph, node) for node in
+                    find_leaf_nodes(unique_graph, type='components')]))
     list_fetcher.add_list(root_node,
                           unique_graph_list_per_root_node,
                           unique_node_lists_per_root_node,
@@ -655,10 +532,9 @@ def create_graph_list(G, threading=False):
 def get_layers(G):
     # go through every layer of the tree and look for OR/>= assemblies
     known_nodes = find_root_nodes(G)
-    layers = [list(set(known_nodes))]
+    layers = [sorted(list(set(known_nodes)))]
     while True:
         candidates = []
-        next_layer = []
         node_dict = {known_node: get_node_name(G, known_node) for known_node in known_nodes}
         # logging.debug(f"Known nodes: {node_dict}")
         for root_node in known_nodes:
@@ -679,10 +555,7 @@ def get_layers(G):
             logging.debug("All layers found. Traversed the whole graph")
             return layers
         known_nodes.extend(list(set(next_layer)))
-        layers.append(list(set(next_layer)))
-
-    # logging.info(set(nodes_on_layer))
-    # logging.info(set([list(nx.bfs_tree(G, root_node)) for root_node in find_root_nodes(G)]))
+        layers.append(sorted(list(set(next_layer))))
 
 
 def check_isolability(all_equipment, leaf_name_lists, number_of_faults):
@@ -748,7 +621,7 @@ def check_recoverability(G, all_equipment, leaf_name_lists, number_of_faults):
                 logging.info(
                     f"The mode {get_node_name(G, mode)} is not available if {components} {'have' if plural else 'has'} a fault.")
                 mode_available = False
-        logging.info(f"The fault recoverability for mode {get_node_name(G, mode)} is {mode_available}\n\n")
+        logging.info(f"The fault recoverability for mode {get_node_name(G, mode)} is {mode_available}")
         if mode_available:
             recoverable.append(mode)
         else:
