@@ -17,7 +17,7 @@ from base import get_configuration_all_modes, no_possible_successors, get_fault_
     list_to_int
 from evaluate_mcts_strategy import evaluate_mcts_strategy
 from expand import add_edge, mcts_expand, add_state
-from export import export_graph, export_mcts_strategy, export_prism_file
+from export import export_strategy_graph, export_mcts_strategy, export_prism_file
 from selec import mcts_select
 from simulations import mcts_simulate
 from naive import evaluate_naive
@@ -347,7 +347,7 @@ def main():
     # Exporting stuff
     if parameters["output_graph"]:
         remove_unnecessary_nodes(graph)
-        export_graph(graph, stats, strategy, parameters["output_dot_file"])
+        export_strategy_graph(graph, stats, strategy, parameters["output_dot_file"])
 
     print("Time taken: ", round(end_time_mcts - start_time_mcts + end_time_prism - start_time_prism, 2), "s")
 
