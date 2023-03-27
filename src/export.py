@@ -26,7 +26,7 @@ def export_mcts_strategy(graph, data, statistics, parameters):
     return strategy
 
 
-def export_graph(mcts_graph, statistics, strategy, filename):
+def export_strategy_graph(mcts_graph, statistics, strategy, filename):
     print("Exporting graph to file:", filename)
     nx.drawing.nx_pydot.write_dot(mcts_graph, filename)
 

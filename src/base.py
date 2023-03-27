@@ -481,17 +481,17 @@ def get_configuration_all_modes(statistics, parameters):
     layers = get_layers(dependency_graph)
     all_equipment = sorted(find_leaf_nodes(dependency_graph, layers))
     configuration_all_modes = {}
-    for mode in find_root_nodes(dependency_graph):
-        # logging.info(f"Configuration for mode {get_node_name(dependency_graph, mode)}")
-        sub_graph = dependency_graph.copy()
-        for node in dependency_graph:
-            if node not in list(nx.bfs_tree(dependency_graph, mode)):
-                sub_graph.remove_node(node)
-        layers = get_layers(sub_graph)
-        configuration_all_modes[get_node_name(dependency_graph, mode)] = get_configuration_new(sub_graph, layers,
-                                                                                               all_equipment)
+    # for mode in find_root_nodes(dependency_graph):
+    #     # logging.info(f"Configuration for mode {get_node_name(dependency_graph, mode)}")
+    #     sub_graph = dependency_graph.copy()
+    #     for node in dependency_graph:
+    #         if node not in list(nx.bfs_tree(dependency_graph, mode)):
+    #             sub_graph.remove_node(node)
+    #     layers = get_layers(sub_graph)
+    #     configuration_all_modes[get_node_name(dependency_graph, mode)] = get_configuration_new(sub_graph, layers,
+    #                                                                                            all_equipment)
 
-    statistics["configuration_all_modes"] = configuration_all_modes
+    # statistics["configuration_all_modes"] = configuration_all_modes
     all_equipment_names = [get_node_name(dependency_graph, n) for n in all_equipment]
     all_modes = [get_node_name(dependency_graph, n) for n in find_root_nodes(dependency_graph)]
     statistics["all_equipments"] = all_equipment_names
