@@ -36,8 +36,12 @@ def export_strategy_graph(mcts_graph, statistics, strategy, filename):
     for state in mcts_graph.nodes:
         if state == 0:
             continue
-        model_file.write("\t\"" + str(int_to_list(statistics, state)) + "\";\n")
-
+        if state in strategy.keys():
+            action = strategy[state]
+            action_name = get_action_name(statistics, action)
+            model_file.write("\t\"" + str(int_to_list(statistics, state)) + "\" [URL=\"" + str(int_to_list(statistics, state)) + "\\n" + action_name + "\"];\n")
+        else:
+            model_file.write("\t\"" + str(int_to_list(statistics, state)) + "\" [URL=\"" + str(int_to_list(statistics, state)) + "\\n" + "Done" + "\"];\n")
     for state in mcts_graph.nodes:
         if state == 0 or no_possible_successors(statistics, state):
             continue

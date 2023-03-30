@@ -3,9 +3,8 @@ import logging
 import re
 from functools import reduce
 from to_precision import to_precision
-from graph_analysis.graph_analysis import \
-    get_node_name, find_leaf_nodes, get_fault_probability, get_effects, \
-    get_assembly_name
+from graph_analysis.graph_analysis import get_node_name, find_leaf_nodes, get_fault_probability, \
+    get_effects
 
 
 class Variable_Handler():
@@ -114,6 +113,13 @@ class Variable_Handler():
 # https://stackoverflow.com/questions/19182188
 def ilen(iterable):
     return reduce(lambda sum, element: sum + 1, iterable, 0)
+
+
+def get_assembly_name(graph, node):
+    # get the name of the predecessor because this indicates the function of the assembly
+    assembly_name = get_node_name(graph, list(graph.predecessors(node))[0])
+    # an example name would be e.g. reaction_wheels_>=3
+    return assembly_name + f"_{get_node_name(graph, node).strip('>=')}"
 
 
 def get_action(G,

@@ -43,18 +43,15 @@ from to_precision import to_precision
 
 # project-specific libraries
 from graph_analysis.generate_config_json import generate_config_json_isolation
-from graph_analysis.graph_analysis import create_graph_list, get_layers, \
-    get_node_name, get_node_id, find_root_nodes, find_leaf_nodes, \
-    check_isolability, check_recoverability, get_root_node_names, \
-    get_fault_probability, find_isolated_nodes
+from graph_analysis.graph_analysis import create_graph_list, get_layers, get_node_name, \
+    find_root_nodes, find_leaf_nodes, check_isolability, check_recoverability, \
+    get_root_node_names, get_fault_probability, find_isolated_nodes
 from graph_analysis.sensitivity_analysis import get_sensitivity_analysis, \
     get_uncertainty_propagation
-from graph_analysis.prism_isolation import generate_prism_model, \
-    generate_props, run_prism, export_strategy, get_configuration_index
+from graph_analysis.prism_isolation import generate_prism_model, generate_props, run_prism, \
+    export_strategy, get_configuration_index
 from graph_analysis.run_strategy import get_strategy_graph
 from graph_analysis.isolation_graph import MyDotWidget, add_url_property
-
-
 # from graph_analysis.generate_isolation import traverse_binary_tree_weights, StrategyWriter, get_configuration_lists
 
 
@@ -481,7 +478,7 @@ class MainWindow(Gtk.Window):
             logging.info(f"No isolated nodes found")
 
         layers = get_layers(self.G)
-        self.all_equipment = sorted([get_node_name(self.G, node) for node in find_leaf_nodes(self.G, layers)])
+        self.all_equipment = sorted([get_node_name(self.G, node) for node in find_leaf_nodes(self.G, layers, type='components')])
         self.page6.set_graph_and_all_equipment(self.G, self.all_equipment)
         logging.info(f"All equipment: {[(index, component) for index, component in enumerate(self.all_equipment)]}")
         self.scroll_down2()
@@ -537,9 +534,6 @@ class MainWindow(Gtk.Window):
         self.get_report()
         self.get_sensitivity()
         self.scroll_down2()
-
-        logging.info(f"{configuration_space=}")
-        logging.info(f"layers={get_layers(self.G)}")
 
     def reset_check_buttons(self, widget):
         if self.analysis_done:
@@ -671,7 +665,7 @@ class MainWindow(Gtk.Window):
             self.fault_probabilities_text.get_buffer().set_text(file_content, len(file_content))
 
     def generate_fault_probs(self):
-        string_list = [component + ": 0.0" for component in self.all_equipment]
+        string_list = [component + ": 0.01" for component in self.all_equipment]
         logging.info(f"Generated fault probabilites template: {', '.join(string_list)}")
         return ",\n".join(string_list)
 
@@ -760,7 +754,7 @@ class MainWindow(Gtk.Window):
         return mode_costs
 
     def generate_mode_costs(self):
-        string_list = [mode + ": 0.0" for mode in get_root_node_names(self.G)]
+        string_list = [mode + ": 100.0" for mode in get_root_node_names(self.G)]
         logging.info(f"Generated mode costs template: {', '.join(string_list)}")
         return ",\n".join(string_list)
 
@@ -914,39 +908,48 @@ class MainWindow(Gtk.Window):
                         f'--successorstokeep {self.children_to_keep_entry.get_text()} '
                         f'--simulationsize {self.simulations_per_node_entry.get_text()} '
                         f'--initialstatefile {self.filename_initial_state} '
-                        f'--debug '
                         f'{self.filename}\n')
 
         self.feed_input(f'\n')
-        generate_config_json_isolation(
-            self.all_equipment,
-            self.base_directory + "temp/",
-            self.base_directory + "temp/prism_strategy_config.json")
-        strategy_name = 'temp/prism_strategy.prism'
+        # generate_config_json_isolation(
+        #     self.all_equipment,
+        #     self.base_directory + "temp/",
+        #     self.base_directory + "temp/prism_strategy_config.json")
+        # strategy_name = 'temp/prism_strategy.prism'
 
         # Generate decision tree for initial state
-        self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
+        # self.feed_input(f'dtcontrol --input {strategy_name} --use-preset avg --benchmark-file benchmark.json --rerun\n')
 
         # Show decision tree on page 6
-        self.open_file(self.base_directory + "/decision_trees/avg/prism_strategy/avg.dot", self.page6)
-        self.page6.zoom_to_fit()
+        # self.open_file(self.base_directory + "/decision_trees/avg/prism_strategy/avg.dot", self.page6)
+        # self.page6.zoom_to_fit()
 
     def execute_strategy_action(self, button):
-        # Compile decision tree
-        tree_filename = self.base_directory + "temp/avg.o"
-        args = f"gcc -shared -fPIC {self.base_directory}decision_trees/avg/prism_strategy/avg.c -o {tree_filename}"
-        result = subprocess.run(args.split(" "), stdout=subprocess.PIPE, text=True)
-
-        strategy_filename = self.base_directory + "temp/prism_strategy.prism"
-        initial_state = self.get_initial_state()
-        graph_filename = self.base_directory + "temp/fault_isolation.dot"
-        get_strategy_graph(self.G, self.leaf_name_lists, None, tree_filename, strategy_filename,
-                           initial_state, self.all_equipment,
-                           graph_filename)
-
-        # Show decision tree on page 6
+        graph_filename = self.base_directory + "temp/mcts_graph.dot"
+        # graph_filename = "/home/jonis/git/build_and_improve_fdir/temp/mcts_graph.dot"
+        # dotcode = add_url_property(graph_filename)
+        # with open(graph_filename + ".dot", 'w') as output:
+        #     print(dotcode, file=output)
         self.open_file(graph_filename, self.page6)
+        # window.page6.set_dotcode(bytes(dotcode, encoding='utf8'))
         self.page6.zoom_to_fit()
+        self.notebook.set_current_page(5)
+
+        # # Compile decision tree
+        # tree_filename = self.base_directory + "temp/avg.o"
+        # args = f"gcc -shared -fPIC {self.base_directory}decision_trees/avg/prism_strategy/avg.c -o {tree_filename}"
+        # result = subprocess.run(args.split(" "), stdout=subprocess.PIPE, text=True)
+        #
+        # strategy_filename = self.base_directory + "temp/prism_strategy.prism"
+        # initial_state = self.get_initial_state()
+        # graph_filename = self.base_directory + "temp/fault_isolation.dot"
+        # get_strategy_graph(self.G, self.leaf_name_lists, None, tree_filename, strategy_filename,
+        #                    initial_state, self.all_equipment,
+        #                    graph_filename)
+        #
+        # # Show decision tree on page 6
+        # self.open_file(graph_filename, self.page6)
+        # self.page6.zoom_to_fit()
 
     def traverse_graph_with_initial_state(self, button):
         # self.terminal_notebook.set_current_page(1)
@@ -1117,20 +1120,11 @@ def main():
     window.connect('delete-event', Gtk.main_quit)
     window.show_all()
 
-    logging.basicConfig(
-        format="[%(levelname)s] %(funcName)s: %(message)s")
+    logging.basicConfig(format="[%(levelname)s] %(funcName)s: %(message)s")
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     handler = MyHandler(window.log_output)
     # logger.addHandler(handler)
-
-    # graph_filename = "/home/jonis/git/build_and_improve_fdir/temp/sample_graph.dot"
-    # dotcode = add_url_property(graph_filename)
-    # with open(graph_filename + ".dot", 'w') as output:
-    #     print(dotcode, file=output)
-    # # window.open_file(graph_filename, window.page6)
-    # window.page6.set_dotcode(bytes(dotcode, encoding='utf8'))
-    # window.page6.zoom_to_fit()
 
     Gtk.main()
 

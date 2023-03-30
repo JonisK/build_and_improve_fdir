@@ -18,7 +18,7 @@ def get_configuration_all_modes(statistics, parameters):
 
     layers = get_layers(dependency_graph)
     all_equipment = sorted(find_leaf_nodes(dependency_graph, layers))
-    all_equipment_names = [get_node_name(dependency_graph, n) for n in all_equipment]
+    all_equipment_names = sorted([get_node_name(dependency_graph, n) for n in all_equipment])
     all_modes = [get_node_name(dependency_graph, n) for n in find_root_nodes(dependency_graph)]
     statistics["all_equipments"] = all_equipment_names
     statistics["number_of_equipments"] = len(all_equipment_names)
