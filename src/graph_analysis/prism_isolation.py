@@ -240,29 +240,29 @@ def get_labels(G, all_equipment, hidden_variable, component_to_be_isolated="any"
 
 
 def get_init_string(G, leaf_name_lists, all_equipment, hidden_variable):
-    # init_string = "init\n"
-    # component_strings = []
-    # for component in find_leaf_nodes(G, type='components'):
-    #     component_strings.append(f"{get_node_name(G, component)}=1")
-    # init_string += " & ".join(component_strings)
-    # init_string += "\nendinit\n"
+    init_string = "init\n"
+    component_strings = []
+    for component in find_leaf_nodes(G, type='components'):
+        component_strings.append(f"{get_node_name(G, component)}=1")
+    init_string += " & ".join(component_strings)
+    init_string += "\nendinit\n"
 
     # init_string = "init\n  true\nendinit\n"
 
-    init_string = "init\n"
-    config_strings = []
-    for mode in leaf_name_lists:
-        for leaf_name_list in leaf_name_lists[mode]:
-            init_per_config = []
-            for component in all_equipment:
-                init_per_config.append(f"{component}={'1' if component in leaf_name_list else '0'}")
-            if hidden_variable:
-                for faulty_component in leaf_name_list:
-                    config_strings.append(f"{' & '.join(init_per_config)} & faulty_component={all_equipment.index(faulty_component)} // {get_node_name(G, mode)}")
-            else:
-                config_strings.append(f"{' & '.join(init_per_config)} // {get_node_name(G, mode)}")
-    init_string += "\n  | ".join(config_strings)
-    init_string += "\nendinit\n"
+    # init_string = "init\n"
+    # config_strings = []
+    # for mode in leaf_name_lists:
+    #     for leaf_name_list in leaf_name_lists[mode]:
+    #         init_per_config = []
+    #         for component in all_equipment:
+    #             init_per_config.append(f"{component}={'1' if component in leaf_name_list else '0'}")
+    #         if hidden_variable:
+    #             for faulty_component in leaf_name_list:
+    #                 config_strings.append(f"{' & '.join(init_per_config)} & faulty_component={all_equipment.index(faulty_component)} // {get_node_name(G, mode)}")
+    #         else:
+    #             config_strings.append(f"{' & '.join(init_per_config)} // {get_node_name(G, mode)}")
+    # init_string += "\n  | ".join(config_strings)
+    # init_string += "\nendinit\n"
 
     return init_string
 
@@ -270,7 +270,7 @@ def get_init_string(G, leaf_name_lists, all_equipment, hidden_variable):
 def generate_prism_model(base_directory, filename, G, all_equipment, unique_graph_list, leaf_name_lists, configuration_list,
                          equipment_fault_probabilities, mode_costs, hidden_variable, debug=False):
     trimmed_filename = filename.split('/')[-1].split('.')[0]
-    work_directory = base_directory + "/temp/"
+    work_directory = base_directory + "temp/"
     if debug:
         prism_filename = f"{work_directory + trimmed_filename}_debug.prism"
     else:
@@ -356,7 +356,7 @@ def run_prism_helper(base_directory, filename, component):
     prism_path = "prism/bin/prism"
     pattern = r'Result: \S*'
     args = f"{base_directory + prism_path} {work_directory + trimmed_filename}.prism {work_directory + trimmed_filename}.props -prop {component} -explicit -javamaxmem 50g"
-    # logging.info(f"Command: prism {trimmed_filename}.prism {trimmed_filename}.props -prop {component} -explicit -javamaxmem 50g")
+    logging.info(f"Command: prism {trimmed_filename}.prism {trimmed_filename}.props -prop {component} -explicit -javamaxmem 50g")
     result = subprocess.run(args.split(" "), stdout=subprocess.PIPE, text=True)
     # logging.info(result.stdout)
     prism_result = re.findall(pattern, result.stdout)

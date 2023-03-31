@@ -69,6 +69,7 @@ def get_node_name(graph, node):
         # only return the first line, do not include quotes
         return attr['xlabel'].strip('\"').split('\n')[0]
     else:
+        logging.warning(f"Node with ID {node} has no name.")
         return node  # if the node has no name tag, return its ID
 
 
@@ -76,8 +77,9 @@ def get_node_id(graph, name):
     for node in list(graph.nodes):
         attr = graph.nodes[node]
         if 'xlabel' in attr:
-            if name == attr['xlabel'].strip('\"'):
+            if name == attr['xlabel'].strip('\"').split('\n')[0]:
                 return node
+    logging.warning(f"Node ID for {name=} not found.")
     return name  # return name in case the node ID could not be found
 
 
