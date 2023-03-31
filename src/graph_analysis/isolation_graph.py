@@ -16,7 +16,7 @@ from graph_analysis.graph_analysis import get_node_name, get_node_id
 
 
 class InfoDialog(Gtk.Dialog):
-    def __init__(self, info, nx_graph, all_equipment, leaf_name_lists,
+    def __init__(self, info, nx_graph, all_equipment, component_lists,
                  configuration_list):
         super().__init__(title="Extended State Description")
         self.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK)
@@ -41,7 +41,7 @@ class InfoDialog(Gtk.Dialog):
             mode_id = get_node_id(nx_graph, mode)
             configuration_index = int(mode_and_configuration.split('_')[1])
             headers = ['component', 'value', 'usage in next mode']
-            used_components = leaf_name_lists[mode_id][configuration_index]
+            used_components = component_lists[mode_id][configuration_index]
 
         suspects = []
         for component, value in zip(all_equipment, values):
@@ -91,7 +91,7 @@ class MyDotWidget(xdot.ui.DotWidget):
         self.connect('clicked', self.on_url_clicked)
         self.nx_graph = None
         self.all_equipment = []
-        self.leaf_name_lists = {}
+        self.component_lists = {}
         self.configuration_list = {}
 
     def set_graph_and_all_equipment(self, graph, all_equipment):
@@ -99,9 +99,9 @@ class MyDotWidget(xdot.ui.DotWidget):
         self.all_equipment = all_equipment
 
     def set_leaf_name_and_configuration_list(self,
-                                             leaf_name_lists,
+                                             component_lists,
                                              configuration_list):
-        self.leaf_name_lists = leaf_name_lists
+        self.component_lists = component_lists
         self.configuration_list = configuration_list
 
     def on_url_clicked(self, widget, url, event):
@@ -109,7 +109,7 @@ class MyDotWidget(xdot.ui.DotWidget):
         dialog = InfoDialog(info=url,
                             nx_graph=self.nx_graph,
                             all_equipment=self.all_equipment,
-                            leaf_name_lists=self.leaf_name_lists,
+                            component_lists=self.component_lists,
                             configuration_list=self.configuration_list)
         dialog.connect('response', lambda dialog, response: dialog.destroy())
         return True

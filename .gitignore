@@ -1,6 +1,7 @@
 strategy_*.prism
 prism/
 temp/
+experiment_logs/
 recovery_*/
 decision_trees/
 benchmark.html

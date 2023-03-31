@@ -38,7 +38,7 @@ def get_configuration_all_modes(statistics, parameters):
 
 def get_all_actions(dependency_graph, all_equipment, statistics):
     threading = True
-    unique_graph_list, unique_node_lists, leaf_name_lists, \
+    unique_graph_list, unique_node_lists, component_lists, \
         configuration_list, configuration_space = \
         create_graph_list(dependency_graph, threading)
 
@@ -47,8 +47,8 @@ def get_all_actions(dependency_graph, all_equipment, statistics):
     all_actions_cost = {}
     action_to_name_mapping = {}
     name_to_action_mapping = {}
-    for m in leaf_name_lists:
-        all_perm = leaf_name_lists[m]
+    for m in component_lists:
+        all_perm = component_lists[m]
         for i in range(len(all_perm)):
             act = all_perm[i]
             action_vector = []

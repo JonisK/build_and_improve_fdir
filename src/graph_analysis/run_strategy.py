@@ -6,11 +6,11 @@ from graph_analysis.graph_analysis import get_node_id
 
 
 class Strategy_Helper():
-    def __init__(self, G, leaf_name_lists, action_names, filename):
+    def __init__(self, G, component_lists, action_names, filename):
         self.fault_isolation_graph = nx.DiGraph()
 
         self.G = G
-        self.leaf_name_lists = leaf_name_lists
+        self.component_lists = component_lists
         self.action_names = action_names
 
         lib_object = CDLL(filename)
@@ -66,7 +66,7 @@ def propagate_state(configuration_index, strategy_helper, all_equipment, previou
             index = configuration_index[root_node][configuration_number]
         else:
             index = int(configuration_number)
-        used_components = strategy_helper.leaf_name_lists[root_node][index]
+        used_components = strategy_helper.component_lists[root_node][index]
 
         positive_outcome = previous_state.copy()
         # negative_outcome = previous_state.copy()
@@ -135,7 +135,7 @@ def propagate_state(configuration_index, strategy_helper, all_equipment, previou
                 # logging.info(f"{candidate_mode=}, {candidate_configuration_number=}")
                 root_node = get_node_id(strategy_helper.G, candidate_mode)
                 index = configuration_index[root_node][candidate_configuration_number]
-                used_components = strategy_helper.leaf_name_lists[root_node][index]
+                used_components = strategy_helper.component_lists[root_node][index]
                 candidate_positive_outcome = previous_state.copy()
                 for component in previous_state:
                     if component in used_components:
@@ -157,7 +157,7 @@ def propagate_state(configuration_index, strategy_helper, all_equipment, previou
 
 
 def get_strategy_graph(G,
-                       leaf_name_lists,
+                       component_lists,
                        configuration_index,
                        tree_filename,
                        strategy_filename,
@@ -165,7 +165,7 @@ def get_strategy_graph(G,
                        all_equipment,
                        graph_filename):
     action_names = get_action_names(strategy_filename)
-    strategy_helper = Strategy_Helper(G, leaf_name_lists, action_names, tree_filename)
+    strategy_helper = Strategy_Helper(G, component_lists, action_names, tree_filename)
     # initial_state = {component: 'suspicious' for component in all_equipment}
 
     initial_mode_and_configuration = strategy_helper.execute_isolation_strategy(initial_state, 0)

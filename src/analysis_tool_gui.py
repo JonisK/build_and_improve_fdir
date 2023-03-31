@@ -102,7 +102,7 @@ class MainWindow(Gtk.Window):
 
         self.all_equipment = []
         self.unique_graph_list = {}
-        self.leaf_name_lists = {}
+        self.component_lists = {}
         self.configuration_list = {}
 
         self.configuration_index = {}
@@ -386,13 +386,13 @@ class MainWindow(Gtk.Window):
         self.graph = None
         self.all_equipment = []
         self.unique_graph_list = {}
-        self.leaf_name_lists = {}
+        self.component_lists = {}
         self.configuration_list = {}
 
         self.configuration_index = {}
 
         self.page6.set_graph_and_all_equipment(self.graph, self.all_equipment)
-        self.page6.set_leaf_name_and_configuration_list(self.leaf_name_lists, self.configuration_list)
+        self.page6.set_leaf_name_and_configuration_list(self.component_lists, self.configuration_list)
 
     def on_open(self, action):
         chooser = Gtk.FileChooserDialog(parent=self,
@@ -502,7 +502,7 @@ class MainWindow(Gtk.Window):
 
     def get_graph_stats(self, filename, G):
         layers = get_layers(G)
-        num_configs = [len(self.leaf_name_lists[this_list]) for this_list in self.leaf_name_lists]
+        num_configs = [len(self.component_lists[this_list]) for this_list in self.component_lists]
         self.graph_stats.set_markup(
             f"<b><big>Selected graph: {filename.split('/')[-1]}</big></b>\n"
             + f" - {len(find_root_nodes(G))} modes\n"
@@ -519,10 +519,10 @@ class MainWindow(Gtk.Window):
     def analyze_graph(self, G):
         logging.info("Analyze the configuration graph")
         threading = True
-        self.unique_graph_list, unique_node_lists, self.leaf_name_lists, \
+        self.unique_graph_list, unique_node_lists, self.component_lists, \
             self.configuration_list, configuration_space = \
             create_graph_list(G, threading)
-        self.page6.set_leaf_name_and_configuration_list(self.leaf_name_lists,
+        self.page6.set_leaf_name_and_configuration_list(self.component_lists,
                                                         self.configuration_list)
 
         # set button states
@@ -549,7 +549,7 @@ class MainWindow(Gtk.Window):
         self.terminal_notebook.set_current_page(1)
         logging.info("Checking isolation")
         self.isolable, self.non_isolable = check_isolability(self.all_equipment,
-                                                             self.leaf_name_lists,
+                                                             self.component_lists,
                                                              int(self.number_of_faults_entry.get_text()))
         self.num_non_isolable = len(self.non_isolable)
         num_isolable = len(self.all_equipment) - self.num_non_isolable
@@ -602,7 +602,7 @@ class MainWindow(Gtk.Window):
             self.graph,
             self.all_equipment,
             self.unique_graph_list,
-            self.leaf_name_lists,
+            self.component_lists,
             self.configuration_list,
             self.get_probabilities(probabilities_type="mean"),
             self.get_costs(),
@@ -634,13 +634,13 @@ class MainWindow(Gtk.Window):
         self.recoverable, self.non_recoverable = check_recoverability(
             self.graph,
             self.all_equipment,
-            self.leaf_name_lists,
+            self.component_lists,
             int(self.number_of_faults_entry.get_text()))
         self.num_non_recoverable = len(self.non_recoverable)
-        num_recoverable = len(self.leaf_name_lists) - self.num_non_recoverable
+        num_recoverable = len(self.component_lists) - self.num_non_recoverable
         self.recovery_info.set_markup(
             f"<b><big>Recovery info</big></b>\n"
-            + f" - {num_recoverable} modes ({to_precision(100 * (num_recoverable / len(self.leaf_name_lists)), 3, notation='std')}%) are fault-tolerant\n"
+            + f" - {num_recoverable} modes ({to_precision(100 * (num_recoverable / len(self.component_lists)), 3, notation='std')}%) are fault-tolerant\n"
             + f" - {self.num_non_recoverable} modes are not fault-tolerant\n")
         self.check_recoverability_done = True
         self.get_report()
@@ -937,7 +937,7 @@ class MainWindow(Gtk.Window):
     def traverse_graph_with_initial_state(self, button):
         # self.terminal_notebook.set_current_page(1)
         #
-        # configuration_lists = get_configuration_lists(self.leaf_name_lists, self.all_equipment)
+        # configuration_lists = get_configuration_lists(self.component_lists, self.all_equipment)
         #
         # strategy_filename = self.directory + "/../../temp/strategy_initial.prism"
         # states_filename = self.directory + "/../../temp/strategy_initial_states.prism"
@@ -958,7 +958,7 @@ class MainWindow(Gtk.Window):
             self.graph,
             self.all_equipment,
             self.unique_graph_list,
-            self.leaf_name_lists,
+            self.component_lists,
             self.configuration_list,
             self.get_probabilities(probabilities_type="mean"),
             self.get_costs(),
@@ -971,7 +971,7 @@ class MainWindow(Gtk.Window):
             self.graph,
             self.all_equipment,
             self.unique_graph_list,
-            self.leaf_name_lists,
+            self.component_lists,
             self.configuration_list,
             self.get_probabilities(probabilities_type="mean"),
             self.get_costs(),
@@ -1030,7 +1030,7 @@ class MainWindow(Gtk.Window):
                             f"{self.trimmed_filename}_{component}/avg.c -o {tree_filename}\n")
 
         logging.info("Execute decision tree for initial state")
-        self.configuration_index = get_configuration_index(self.graph, self.unique_graph_list, self.leaf_name_lists,
+        self.configuration_index = get_configuration_index(self.graph, self.unique_graph_list, self.component_lists,
                                                            self.configuration_list,
                                                            self.get_probabilities(probabilities_type="mean"),
                                                            self.get_costs())
@@ -1039,7 +1039,7 @@ class MainWindow(Gtk.Window):
         # strategy_filename = f"{work_directory}strategy_{trimmed_filename}.prism"
         # initial_state = self.get_initial_state()
         # graph_filename = f"{work_directory}fault_isolation.dot"
-        # get_strategy_graph(self.graph, self.leaf_name_lists, self.configuration_index, tree_filename, strategy_filename,
+        # get_strategy_graph(self.graph, self.component_lists, self.configuration_index, tree_filename, strategy_filename,
         #                    initial_state,
         #                    graph_filename)
         custom_list = self.all_equipment.copy()
@@ -1053,7 +1053,7 @@ class MainWindow(Gtk.Window):
                                 f"{component}.prism"
             initial_state = self.get_initial_state()
             graph_filename = f"{work_directory}fault_isolation_{component}.dot"
-            get_strategy_graph(self.graph, self.leaf_name_lists, self.configuration_index, \
+            get_strategy_graph(self.graph, self.component_lists, self.configuration_index, \
                                tree_filename, strategy_filename, initial_state, self.all_equipment,
                                graph_filename)
 

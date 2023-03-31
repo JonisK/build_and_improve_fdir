@@ -33,17 +33,17 @@ class GraphListFetcher():
     def __init__(self, number_of_root_nodes):
         self.unique_graph_list = {}
         self.unique_node_lists = {}
-        self.leaf_name_lists = {}
+        self.component_lists = {}
         self.configuration_list = {}
         self.configuration_space = {}
         self.number_of_root_nodes = number_of_root_nodes
         self.number_of_computed_root_nodes = 0
 
     def add_list(self, root_node, unique_graph_list_mode, unique_node_lists_mode,
-                 leaf_name_lists_mode, configuration_list_mode, configuration_space_mode):
+                 component_lists_mode, configuration_list_mode, configuration_space_mode):
         self.unique_graph_list[root_node] = unique_graph_list_mode
         self.unique_node_lists[root_node] = unique_node_lists_mode
-        self.leaf_name_lists[root_node] = leaf_name_lists_mode
+        self.component_lists[root_node] = component_lists_mode
         self.configuration_list[root_node] = configuration_list_mode
         self.configuration_space[root_node] = configuration_space_mode
 
@@ -59,7 +59,7 @@ class GraphListFetcher():
         return self.number_of_computed_root_nodes == self.number_of_root_nodes
 
     def get_graph_lists(self):
-        return self.unique_graph_list, self.unique_node_lists, self.leaf_name_lists, \
+        return self.unique_graph_list, self.unique_node_lists, self.component_lists, \
             self.configuration_list, self.configuration_space
 
 
@@ -69,7 +69,6 @@ def get_node_name(graph, node):
         # only return the first line, do not include quotes
         return attr['xlabel'].strip('\"').split('\n')[0]
     else:
-        logging.warning(f"Node with ID {node} has no name.")
         return node  # if the node has no name tag, return its ID
 
 
@@ -413,12 +412,12 @@ def create_graph_list_mode(main_graph, root_node, list_fetcher, threading):
     # Remove duplicate configurations, i.e. where one assembly shadowed another
     unique_graph_list_mode, unique_node_lists_mode, configuration_list_mode \
         = remove_duplicates(graph_list, node_lists, permutations, root_node)
-    # Generate the leaf_name_lists which is useful for checking fault isolability and tolerance
-    leaf_name_lists_mode = [sorted([get_node_name(graph, node)
+    # Generate the component_lists which is useful for checking fault isolability and tolerance
+    component_lists_mode = [sorted([get_node_name(graph, node)
                                     for node in find_leaf_nodes(graph, type='components')])
                             for graph in unique_graph_list_mode]  # nested list comprehension
     list_fetcher.add_list(root_node, unique_graph_list_mode, unique_node_lists_mode,
-                          leaf_name_lists_mode, configuration_list_mode, configuration_space_mode)
+                          component_lists_mode, configuration_list_mode, configuration_space_mode)
 
 
 # Distribute the analysis of the individual modes over multiple threads
@@ -443,31 +442,31 @@ def create_graph_list(main_graph, threading=False):
             create_graph_list_mode(main_graph, root_node, list_fetcher, threading)
 
     # Retrieve the results of the individual threads from list_fetcher
-    unique_graph_list, unique_node_lists, leaf_name_lists, configuration_list, configuration_space \
+    unique_graph_list, unique_node_lists, component_lists, configuration_list, configuration_space \
         = list_fetcher.get_graph_lists()
-    return unique_graph_list, unique_node_lists, leaf_name_lists, configuration_list, \
+    return unique_graph_list, unique_node_lists, component_lists, configuration_list, \
         configuration_space
 
 
-def check_isolability(all_equipment, leaf_name_lists, number_of_faults):
+def check_isolability(all_equipment, component_lists, number_of_faults):
     if number_of_faults == 1:
         plural = False
     else:
         plural = True
 
-    all_leaf_name_lists = []
-    for root_node in leaf_name_lists:
-        for configuration in leaf_name_lists[root_node]:
-            all_leaf_name_lists.append(configuration)
+    all_component_lists = []
+    for root_node in component_lists:
+        for configuration in component_lists[root_node]:
+            all_component_lists.append(configuration)
     all_equipment_set = set(all_equipment)
 
     isolable_combinations = []
     non_isolable_combinations = []
     for components in itertools.combinations(all_equipment, number_of_faults):
         alternative_set = set()
-        for leaf_name_list in all_leaf_name_lists:
-            if not set(components).issubset(set(leaf_name_list)):
-                for element in leaf_name_list:
+        for component_list in all_component_lists:
+            if not set(components).issubset(set(component_list)):
+                for element in component_list:
                     alternative_set.add(element)
         for component in components:
             alternative_set.add(component)
@@ -491,7 +490,7 @@ def check_isolability(all_equipment, leaf_name_lists, number_of_faults):
     return sorted(isolable), sorted(non_isolable)
 
 
-def check_recoverability(main_graph, all_equipment, leaf_name_lists, number_of_faults):
+def check_recoverability(main_graph, all_equipment, component_lists, number_of_faults):
     if number_of_faults == 1:
         plural = False
     else:
@@ -499,12 +498,12 @@ def check_recoverability(main_graph, all_equipment, leaf_name_lists, number_of_f
 
     recoverable = []
     non_recoverable = []
-    for mode in leaf_name_lists:
+    for mode in component_lists:
         mode_available = True
         for components in itertools.combinations(all_equipment, number_of_faults):
             mode_available_per_combination = False
-            for leaf_name_list in leaf_name_lists[mode]:
-                if reduce(mul, [component not in leaf_name_list for component in components]):
+            for component_list in component_lists[mode]:
+                if reduce(mul, [component not in component_list for component in components]):
                     logging.debug(f"The mode {get_node_name(main_graph, mode)} is available if "
                                   f"{components} {'have' if plural else 'has'} a fault.")
                     mode_available_per_combination = True

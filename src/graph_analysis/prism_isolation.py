@@ -125,7 +125,7 @@ def get_assembly_name(graph, node):
 def get_action(G,
                root_node,
                unique_graph_per_root_node,
-               leaf_name_list_per_root_node,
+               component_list_per_root_node,
                configuration_list_per_root_node,
                variable_handler,
                equipment_fault_probabilities,
@@ -134,13 +134,13 @@ def get_action(G,
                include_configurations=False):
     action_strings = ""
     cost_strings = ""
-    for unique_graph, configuration, leaf_name_list in \
+    for unique_graph, configuration, component_list in \
             zip(unique_graph_per_root_node,
                 configuration_list_per_root_node,
-                leaf_name_list_per_root_node):
+                component_list_per_root_node):
         logging.debug(f"[{get_node_name(G, root_node)}] "
                       f"Write action for {configuration=}")
-        logging.debug(f"{leaf_name_list=}")
+        logging.debug(f"{component_list=}")
         # name
         action_string = f"  [{get_node_name(G, root_node)}"
         configuration_numbers = []
@@ -164,7 +164,7 @@ def get_action(G,
         # block action if one of the utilized components is faulty
         if hidden_variable:
             all_equipment = list(equipment_fault_probabilities.keys())
-            guards += [f"faulty_component!={all_equipment.index(component)}" for component in leaf_name_list]
+            guards += [f"faulty_component!={all_equipment.index(component)}" for component in component_list]
         if guards:
             action_string += " & ".join(guards)
         else:
@@ -175,7 +175,7 @@ def get_action(G,
         action_string += f"{to_precision(1-fault_probability, 30, notation='std')}: "
         # positive outcome, components
         positive_outcomes = []
-        for component in leaf_name_list:
+        for component in component_list:
             positive_outcomes.append(f"({component}\'=0)")
         # positive outcome, variable changes
         positive_outcomes.append(variable_handler.convert_to_prism_outcome(get_effects(G, root_node)))
@@ -185,10 +185,10 @@ def get_action(G,
         else:
             action_string += "true"
         # if not hidden_variable:
-        #     for component in leaf_name_list:
+        #     for component in component_list:
         #         action_string += "\n    + "
         #         # probability of failure
-        #         action_string += f"{to_precision(fault_probability/len(leaf_name_list), 30, notation='std')}: "
+        #         action_string += f"{to_precision(fault_probability/len(component_list), 30, notation='std')}: "
         #         # negative outcome
         #         action_string += f"(faulty_component'={all_equipment.index(component)})"
         #     action_string += ";\n"
@@ -239,7 +239,7 @@ def get_labels(G, all_equipment, hidden_variable, component_to_be_isolated="any"
     return label_string
 
 
-def get_init_string(G, leaf_name_lists, all_equipment, hidden_variable):
+def get_init_string(G, component_lists, all_equipment, hidden_variable):
     init_string = "init\n"
     component_strings = []
     for component in find_leaf_nodes(G, type='components'):
@@ -251,13 +251,13 @@ def get_init_string(G, leaf_name_lists, all_equipment, hidden_variable):
 
     # init_string = "init\n"
     # config_strings = []
-    # for mode in leaf_name_lists:
-    #     for leaf_name_list in leaf_name_lists[mode]:
+    # for mode in component_lists:
+    #     for component_list in component_lists[mode]:
     #         init_per_config = []
     #         for component in all_equipment:
-    #             init_per_config.append(f"{component}={'1' if component in leaf_name_list else '0'}")
+    #             init_per_config.append(f"{component}={'1' if component in component_list else '0'}")
     #         if hidden_variable:
-    #             for faulty_component in leaf_name_list:
+    #             for faulty_component in component_list:
     #                 config_strings.append(f"{' & '.join(init_per_config)} & faulty_component={all_equipment.index(faulty_component)} // {get_node_name(G, mode)}")
     #         else:
     #             config_strings.append(f"{' & '.join(init_per_config)} // {get_node_name(G, mode)}")
@@ -267,7 +267,7 @@ def get_init_string(G, leaf_name_lists, all_equipment, hidden_variable):
     return init_string
 
 
-def generate_prism_model(base_directory, filename, G, all_equipment, unique_graph_list, leaf_name_lists, configuration_list,
+def generate_prism_model(base_directory, filename, G, all_equipment, unique_graph_list, component_lists, configuration_list,
                          equipment_fault_probabilities, mode_costs, hidden_variable, debug=False):
     trimmed_filename = filename.split('/')[-1].split('.')[0]
     work_directory = base_directory + "temp/"
@@ -283,7 +283,7 @@ def generate_prism_model(base_directory, filename, G, all_equipment, unique_grap
         costs = []
         for root_node in unique_graph_list:
             logging.info(f"Generate actions for mode {get_node_name(G, root_node)}")
-            action, cost = get_action(G, root_node, unique_graph_list[root_node], leaf_name_lists[root_node],
+            action, cost = get_action(G, root_node, unique_graph_list[root_node], component_lists[root_node],
                                       configuration_list[root_node], variable_handler, equipment_fault_probabilities,
                                       mode_costs, hidden_variable)
             actions.append(action)
@@ -308,16 +308,16 @@ def generate_prism_model(base_directory, filename, G, all_equipment, unique_grap
         print("", file=prism_file)
         # init
         if not debug:
-            print(get_init_string(G, leaf_name_lists, all_equipment, hidden_variable), file=prism_file)
+            print(get_init_string(G, component_lists, all_equipment, hidden_variable), file=prism_file)
     logging.info(f"Generated prism model {prism_filename}")
     return variable_handler.get_configuration_index()
 
 
-def get_configuration_index(G, unique_graph_list, leaf_name_lists, configuration_list,
+def get_configuration_index(G, unique_graph_list, component_lists, configuration_list,
                             equipment_fault_probabilities, mode_costs):
     variable_handler = Variable_Handler()
     for root_node in unique_graph_list:
-        get_action(G, root_node, unique_graph_list[root_node], leaf_name_lists[root_node],
+        get_action(G, root_node, unique_graph_list[root_node], component_lists[root_node],
                    configuration_list[root_node], variable_handler, equipment_fault_probabilities,
                    mode_costs, hidden_variable=False)
     return variable_handler.get_configuration_index()

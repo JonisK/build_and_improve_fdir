@@ -32,11 +32,11 @@ class StrategyWriter:
         self.states.close()
 
 
-def get_configuration_lists(leaf_name_lists, all_equipment):
+def get_configuration_lists(component_lists, all_equipment):
     configuration_lists = {}
-    for mode in leaf_name_lists:
+    for mode in component_lists:
         temp_list = []
-        for index, configuration in enumerate(leaf_name_lists[mode]):
+        for index, configuration in enumerate(component_lists[mode]):
             # generate configuration
             indices = [0] * 23
             # print(indices)
