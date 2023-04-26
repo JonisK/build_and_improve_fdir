@@ -29,15 +29,16 @@ class Variable_Handler():
         return self.configurations[configuration].index(value)
 
     def convert_to_prism_guard(self, guard):
-        guard_list = []
-        for condition in guard.split('&'):
+        prism_guard = guard
+        # guard_list = []
+        for condition in re.findall(r"\w+\s*=\s*\w+", guard):
             # get text before the equal sign
-            split_condition = condition.split('=')
+            variable, value = condition.replace(' ', '').split('=')
             # variable = regex.findall(r"(?<=\=\s*)\w+", condition)[0]
-            variable = split_condition[0].strip()
+            # variable = split_condition[0]
             # get text after the equal sign
             # value = regex.findall(r"\w+(?=\s*\=)", condition)[0]
-            value = split_condition[1].strip()
+            # value = split_condition[1]
             # check if the key already exists in the state_variables
             if variable in self.state_variables:
                 # check if the value is known already
@@ -51,8 +52,10 @@ class Variable_Handler():
             # get the index of the value
             index = self.state_variables[variable].index(value)
 
-            guard_list.append(f"{variable}={index}")
-        return " & ".join(guard_list)
+            prism_guard = prism_guard.replace(condition, f"{variable}={index}")
+            # guard_list.append(f"{variable}={index}")
+        # return " & ".join(guard_list)
+        return prism_guard
 
     def convert_to_prism_outcome(self, effects):
         outcome_list = []
@@ -134,6 +137,8 @@ def get_action(G,
                include_configurations=False):
     action_strings = ""
     cost_strings = ""
+    logging.debug(f"[{get_node_name(G, root_node)}] "
+                  f"{configuration_list_per_root_node=}, {component_list_per_root_node=}")
     for unique_graph, configuration, component_list in \
             zip(unique_graph_per_root_node,
                 configuration_list_per_root_node,

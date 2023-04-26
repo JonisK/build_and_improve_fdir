@@ -127,15 +127,6 @@ def get_effects(graph, node):
     return effects
 
 
-def is_component(graph, node):
-    attr = graph.nodes[node]
-    if 'xlabel' in attr:
-        name = attr['xlabel'].strip('\"')
-        if not '=' in name:
-            return True
-    return False
-
-
 def is_guard(graph, node):
     attr = graph.nodes[node]
     if 'xlabel' in attr:
@@ -160,7 +151,7 @@ def find_leaf_nodes(graph, layers=None, root_node=None, type='all'):
         for node in layer:
             if not list(graph.successors(node)):
                 if type == 'all' \
-                        or (type == 'components' and is_component(graph, node)) \
+                        or (type == 'components' and not is_guard(graph, node)) \
                         or (type == 'guards' and is_guard(graph, node)):
                     leaf_nodes_layer.append(node)
         # convert to names, sort alphabetically, convert back to node IDs
@@ -265,6 +256,8 @@ def create_permutations(configurations):  # compute all valid configurations for
                     new_permutation[assembly] = configuration
                     new_permutations.append(new_permutation)
             permutations = new_permutations
+    if not permutations:  # If there is only one configuration, add a dummy item
+        permutations.append({})
     return permutations
 
 
@@ -356,7 +349,8 @@ def create_graphs_mode(graph, root_node, node_list, invariant_nodes, configurati
                        permutations, threading):
     number_of_permutations = len(permutations)
     fetcher = PermutationFetcher(number_of_permutations)
-    logging.debug(f"Created fetcher object")
+    logging.debug(f"[{get_node_name(graph, root_node)}] Created permutation fetcher object for "
+                  f"{number_of_permutations} permutations")
     if threading:
         with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
             for permutation in permutations:
@@ -365,7 +359,8 @@ def create_graphs_mode(graph, root_node, node_list, invariant_nodes, configurati
                                 fetcher)
         timeout = 30  # seconds
         while not fetcher.get_done() and timeout > 0:
-            logging.info("Waiting for all permutation threads to finish")
+            logging.info(f"[{get_node_name(graph, root_node)}] Waiting for all permutation "
+                         f"threads to finish")
             time.sleep(2)
             timeout -= 2
     else:
@@ -454,40 +449,54 @@ def check_isolability(all_equipment, component_lists, number_of_faults):
     else:
         plural = True
 
+    # Flatten the component_lists dictionary into one long list
     all_component_lists = []
     for root_node in component_lists:
         for configuration in component_lists[root_node]:
             all_component_lists.append(configuration)
-    all_equipment_set = set(all_equipment)
 
     isolable_combinations = []
     non_isolable_combinations = []
+    missing_components = {}
+    # Iterate through all components that we want to isolate. For multiple faults, iterate through
+    # all combinations of n components
     for components in itertools.combinations(all_equipment, number_of_faults):
+        # Add components to the alternative_set if they  are part of a configuration that does not
+        # contain the component to be isolated
         alternative_set = set()
         for component_list in all_component_lists:
-            if not set(components).issubset(set(component_list)):
+            if not set(components).intersection(set(component_list)):
                 for element in component_list:
-                    alternative_set.add(element)
-        for component in components:
-            alternative_set.add(component)
-        if alternative_set == all_equipment_set:
-            isolable_combinations.append(components)
+                    alternative_set.add(element)  # set will automatically prune duplicates
+        # Check if all components except for those we wanted to isolate have been added
+        if alternative_set == set(all_equipment) - set(components):
+            isolable_combinations.append(components)  # This combination of components is isolable
             logging.debug(f"Fault{'s' if plural else ''} in component{'s' if plural else ''} "
                           f"{', '.join(components)} {'are' if plural else 'is'} isolable.")
         else:
-            non_isolable_combinations.append(components)
+            non_isolable_combinations.append(components)  # This combination is not isolable
             logging.debug(f"Fault{'s' if plural else ''} in component{'s' if plural else ''} "
                           f"{', '.join(components)} {'are' if plural else 'is'} not isolable.")
+            # Analyze which components were not accessible without also using the component to
+            # isolate. This gives the user a hint on which components need more flexibility around
+            # them in the graph
+            missing_components_combination = set(all_equipment) - set(components) - alternative_set
+            logging.info(f"The alternative set is missing the components "
+                         f"{missing_components_combination} to make "
+                         f"{components} isolable.")
+            missing_components[components[0]] = sorted(missing_components_combination)
 
+    # Flatten the list and make a set out of it to determine all non-isolable components
     non_isolable = set([component for combination in non_isolable_combinations
                         for component in combination])
-    isolable = set(all_equipment) - non_isolable
-    for equipment in all_equipment:
+    isolable = set(all_equipment) - non_isolable  # complement of non-isolable
+    for equipment in all_equipment:  # output results to log
         if equipment in non_isolable:
             logging.info("Equipment " + equipment + " is not isolable.")
         else:
             logging.info("Equipment " + equipment + " is isolable.")
-    return sorted(isolable), sorted(non_isolable)
+    # Return results in alphabetical order
+    return sorted(isolable), sorted(non_isolable), missing_components
 
 
 def check_recoverability(main_graph, all_equipment, component_lists, number_of_faults):
@@ -498,8 +507,10 @@ def check_recoverability(main_graph, all_equipment, component_lists, number_of_f
 
     recoverable = []
     non_recoverable = []
+    single_string_components = {}
     for mode in component_lists:
         mode_available = True
+        single_string_components[mode] = []
         for components in itertools.combinations(all_equipment, number_of_faults):
             mode_available_per_combination = False
             for component_list in component_lists[mode]:
@@ -511,6 +522,7 @@ def check_recoverability(main_graph, all_equipment, component_lists, number_of_f
             if not mode_available_per_combination:
                 logging.info(f"The mode {get_node_name(main_graph, mode)} is not available if "
                              f"{components} {'have' if plural else 'has'} a fault.")
+                single_string_components[mode].append(sorted(components))
                 mode_available = False
         logging.info(f"The fault recoverability for mode {get_node_name(main_graph, mode)} is "
                      f"{mode_available}")
@@ -518,7 +530,7 @@ def check_recoverability(main_graph, all_equipment, component_lists, number_of_f
             recoverable.append(mode)
         else:
             non_recoverable.append(mode)
-    return sorted(recoverable), sorted(non_recoverable)
+    return sorted(recoverable), sorted(non_recoverable), single_string_components
 
 
 def exclude_guards(graph, nodes):

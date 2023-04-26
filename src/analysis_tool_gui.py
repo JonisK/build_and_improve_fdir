@@ -92,12 +92,12 @@ class MainWindow(Gtk.Window):
 
         self.isolable = []
         self.non_isolable = []
-        self.num_non_isolable = 0
+        self.missing_components = {}
         self.isolation_cost = {}
 
         self.recoverable = []
         self.non_recoverable = []
-        self.num_non_recoverable = 0
+        self.single_string_components = {}
         self.recovery_cost = {}
 
         self.all_equipment = []
@@ -285,7 +285,7 @@ class MainWindow(Gtk.Window):
         self.grid.attach(self.scrollable_treelist, 0, 0, 4, 9)
 
         # export button
-        export_button = Gtk.Button(label="Export")
+        export_button = Gtk.Button(label="Export State")
         export_button.connect("clicked", self.export_action)
         self.grid.attach(export_button, 0, 9, 1, 1)
 
@@ -297,15 +297,15 @@ class MainWindow(Gtk.Window):
         build_isolation_per_state_button_mcts_visualize.connect("clicked", self.execute_strategy_action)
         self.grid.attach_next_to(build_isolation_per_state_button_mcts_visualize, build_isolation_per_state_button_mcts,
                                  Gtk.PositionType.RIGHT, 1, 1)
-        build_isolation_per_state_button_prism = Gtk.Button(label="Build via PRISM model generation")
-        build_isolation_per_state_button_prism.connect("clicked", self.traverse_graph_with_initial_state)
-        self.grid.attach_next_to(build_isolation_per_state_button_prism,
-                                 build_isolation_per_state_button_mcts_visualize, Gtk.PositionType.RIGHT, 1, 1)
-        build_isolation_per_state_button_prism_visualize = Gtk.Button(label="Visualize PRISM strategy")
-        build_isolation_per_state_button_prism_visualize.connect("clicked", self.execute_strategy_action_isolation)
-        self.grid.attach_next_to(build_isolation_per_state_button_prism_visualize,
-                                 build_isolation_per_state_button_prism,
-                                 Gtk.PositionType.RIGHT, 1, 1)
+        # build_isolation_per_state_button_prism = Gtk.Button(label="Build via PRISM model generation")
+        # build_isolation_per_state_button_prism.connect("clicked", self.traverse_graph_with_initial_state)
+        # self.grid.attach_next_to(build_isolation_per_state_button_prism,
+        #                          build_isolation_per_state_button_mcts_visualize, Gtk.PositionType.RIGHT, 1, 1)
+        # build_isolation_per_state_button_prism_visualize = Gtk.Button(label="Visualize PRISM strategy")
+        # build_isolation_per_state_button_prism_visualize.connect("clicked", self.execute_strategy_action_isolation)
+        # self.grid.attach_next_to(build_isolation_per_state_button_prism_visualize,
+        #                          build_isolation_per_state_button_prism,
+        #                          Gtk.PositionType.RIGHT, 1, 1)
 
         self.notebook.append_page(child=self.page5, tab_label=Gtk.Label(label='Enter State'))
 
@@ -375,12 +375,12 @@ class MainWindow(Gtk.Window):
     def clear_variables(self):
         self.isolable = []
         self.non_isolable = []
-        self.num_non_isolable = 0
+        self.missing_components = {}
         self.isolation_cost = {}
 
         self.recoverable = []
         self.non_recoverable = []
-        self.num_non_recoverable = 0
+        self.single_string_components = {}
         self.recovery_cost = {}
 
         self.graph = None
@@ -462,10 +462,6 @@ class MainWindow(Gtk.Window):
             self.error_dialog(str(ex))
 
     def import_graph(self, filename):
-        logging.basicConfig(
-            format="[%(levelname)s] %(funcName)s: %(message)s")
-        logging.getLogger().setLevel(logging.INFO)
-
         logging.info("Reading from graph " + filename)
 
         graphs = pydot.graph_from_dot_file(filename)
@@ -525,6 +521,8 @@ class MainWindow(Gtk.Window):
         self.page6.set_leaf_name_and_configuration_list(self.component_lists,
                                                         self.configuration_list)
 
+        logging.info(f"{self.all_equipment=}")
+
         # set button states
         self.button_check_isolation.set_sensitive(True)
         self.button_build_isolation.set_sensitive(True)
@@ -548,15 +546,14 @@ class MainWindow(Gtk.Window):
         self.button_check_isolation.set_sensitive(False)
         self.terminal_notebook.set_current_page(1)
         logging.info("Checking isolation")
-        self.isolable, self.non_isolable = check_isolability(self.all_equipment,
-                                                             self.component_lists,
-                                                             int(self.number_of_faults_entry.get_text()))
-        self.num_non_isolable = len(self.non_isolable)
-        num_isolable = len(self.all_equipment) - self.num_non_isolable
+        self.isolable, self.non_isolable, self.missing_components = \
+            check_isolability(self.all_equipment,
+                              self.component_lists,
+                              int(self.number_of_faults_entry.get_text()))
         self.isolation_info.set_markup(
             f"<b><big>Isolation info</big></b>\n"
-            + f" - {num_isolable} components ({to_precision(100 * (num_isolable / len(self.all_equipment)), 3, notation='std')}%) can be isolated\n"
-            + f" - {self.num_non_isolable} components cannot be isolated\n")
+            + f" - {len(self.isolable)} components ({to_precision(100 * (len(self.isolable) / len(self.all_equipment)), 3, notation='std')}%) can be isolated\n"
+            + f" - {len(self.non_isolable)} components cannot be isolated\n")
         self.check_isolability_done = True
         self.get_report()
         self.scroll_down2()
@@ -631,17 +628,15 @@ class MainWindow(Gtk.Window):
         self.button_check_recovery.set_sensitive(False)
         self.terminal_notebook.set_current_page(1)
         logging.info("Checking recovery")
-        self.recoverable, self.non_recoverable = check_recoverability(
-            self.graph,
-            self.all_equipment,
-            self.component_lists,
-            int(self.number_of_faults_entry.get_text()))
-        self.num_non_recoverable = len(self.non_recoverable)
-        num_recoverable = len(self.component_lists) - self.num_non_recoverable
+        self.recoverable, self.non_recoverable, self.single_string_components = \
+            check_recoverability(self.graph,
+                                 self.all_equipment,
+                                 self.component_lists,
+                                 int(self.number_of_faults_entry.get_text()))
         self.recovery_info.set_markup(
             f"<b><big>Recovery info</big></b>\n"
-            + f" - {num_recoverable} modes ({to_precision(100 * (num_recoverable / len(self.component_lists)), 3, notation='std')}%) are fault-tolerant\n"
-            + f" - {self.num_non_recoverable} modes are not fault-tolerant\n")
+            + f" - {len(self.recoverable)} modes ({to_precision(100 * (len(self.recoverable) / len(self.component_lists)), 3, notation='std')}%) are fault-tolerant\n"
+            + f" - {len(self.non_recoverable)} modes are not fault-tolerant\n")
         self.check_recoverability_done = True
         self.get_report()
         self.scroll_down2()
@@ -794,17 +789,30 @@ class MainWindow(Gtk.Window):
 
         message = "<b><big>Weakness Report</big></b>\n\n"
         if self.check_isolability_done and self.check_recoverability_done:
-            if self.num_non_isolable == 0 and self.num_non_recoverable == 0:
+            message += f"Isolation info\n"
+            message += f"\t {len(self.isolable)} components ({to_precision(100 * (len(self.isolable) / len(self.all_equipment)), 3, notation='std')}%) can be isolated\n"
+            message += f"\t {len(self.non_isolable)} components cannot be isolated\n\n"
+
+            message += f"Recovery info\n"
+            message += f"\t {len(self.recoverable)} modes ({to_precision(100 * (len(self.recoverable) / len(self.component_lists)), 3, notation='std')}%) are fault-tolerant\n"
+            message += f"\t {len(self.non_recoverable)} modes are not fault-tolerant\n\n"
+
+            if not self.non_isolable and not self.non_recoverable:
                 message += f"The graph {self.filename.split('/')[-1]} shows no weaknesses.\n"
             else:
                 message += f"The graph {self.filename.split('/')[-1]} shows the following weaknesses:\n"
                 for component in self.non_isolable:
-                    message += f"\tComponent {component} is not isolable\n"
+                    message += f"\tComponent {component} is not isolable because "
+                    plural = True if len(self.missing_components[component]) > 1 else False
+                    message += f"{', '.join(self.missing_components[component])} "
+                    message += f"{'are' if plural else 'is'} not independently accessible\n"
                 message += "\n"
                 for mode in self.non_recoverable:
-                    message += f"\tMode {get_node_name(self.graph, mode)} is not " \
-                               f"{self.number_of_faults_entry.get_text()}-fault tolerant\n"
-            if self.num_non_isolable or self.num_non_recoverable:
+                    message += f"\tMode {get_node_name(self.graph, mode)} is not "
+                    message += f"{self.number_of_faults_entry.get_text()}-fault tolerant for "
+                    message += f"faults in {', '.join([', '.join(item) for item in self.single_string_components[mode]])}\n"  # ', '.join(self.single_string_components[mode])}\n"
+                message += "\n"
+            if self.isolable or self.recoverable:
                 message += "\nThe following components and modes show no weaknesses:\n"
                 for component in self.isolable:
                     message += f"\tComponent {component} is isolable\n"
@@ -823,15 +831,16 @@ class MainWindow(Gtk.Window):
             fault_probs_sorted = dict(sorted(fault_probs.items(), key=lambda item: item[1], reverse=True))
             for mode in fault_probs_sorted:
                 message += f"\tThe fault probability for mode {get_node_name(self.graph, mode)} is {to_precision(100 * fault_probs_sorted[mode], 3)} %\n"
+            message += "\n"
 
         if self.run_isolation_done:
-            message += f"\nCost for the isolation of the components:\n"
+            message += f"Cost for the isolation of the components:\n"
             for component, cost in sorted(self.isolation_cost.items(), key=lambda item: item[1], reverse=True):
                 if cost < float('inf'):
-                    message += f"\tThe cost for isolating {component} is {to_precision(cost, 4)}.\n"
+                    message += f"\tThe cost for isolating {component} is {to_precision(cost, 4)}\n"
             for component, cost in self.isolation_cost.items():
                 if cost == float('inf'):
-                    message += f"\t{component} is not isolable. No cost can be calculated.\n"
+                    message += f"\t{component} is not isolable. No cost can be calculated\n"
         else:
             message += f"Execute 'Export PRISM' and 'Run PRISM' to get the isolation cost.\n"
 
@@ -1094,15 +1103,18 @@ class MainWindow(Gtk.Window):
 
 
 def main():
+    logging.basicConfig(format="[%(levelname)s] %(funcName)s: %(message)s")
+    logging.getLogger().setLevel(logging.INFO)
+
     window = MainWindow()
     window.set_default_size(1500, 900)
     window.connect('delete-event', Gtk.main_quit)
     window.show_all()
 
-    logging.basicConfig(format="[%(levelname)s] %(funcName)s: %(message)s")
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    handler = MyHandler(window.log_output)
+
+    # logger = logging.getLogger()
+    # logger.setLevel(logging.DEBUG)
+    # handler = MyHandler(window.log_output)
     # logger.addHandler(handler)
 
     Gtk.main()

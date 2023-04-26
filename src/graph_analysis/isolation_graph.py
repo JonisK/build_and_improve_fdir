@@ -105,7 +105,6 @@ class MyDotWidget(xdot.ui.DotWidget):
         self.configuration_list = configuration_list
 
     def on_url_clicked(self, widget, url, event):
-        logging.info("Dialog clicked")
         dialog = InfoDialog(info=url,
                             nx_graph=self.nx_graph,
                             all_equipment=self.all_equipment,

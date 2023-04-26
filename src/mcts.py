@@ -133,7 +133,7 @@ def mcts_outer(parameters):
     try:
         parse_equipment(statistics, parameters)
     except:
-        print("Syntax error in input file:", parameters["cost_file"], "in the equipment_fault_probabilities part")
+        print("Syntax error in input file:", parameters["equipment_fail_probabilities_file"], "in the equipment_fault_probabilities part")
 
     print("Starting MCTS...")
     time.sleep(0.01)
@@ -294,7 +294,11 @@ def parse_equipment(statistics, parameters):
     lines = f.readlines()
     equipment_fail_probabilities = {}
     for line in lines:
-        item = re.search(r"([a-zA-Z0-9_-]*)\s*:\s*([0-9.]*)", line)
+        item = re.search(r"([a-zA-Z0-9_-]*)\s*:"  # name
+                         r"\s*([0-9.]*),?\s*"  # mean fault probability
+                         r"\[?([0-9.]*),?\s*"  # lower bound of uncertainty interval
+                         r"([0-9.]*)\]?",  # upper bound of uncertainty interval
+                         line)
         if item is not None:
             equipment_fail_probabilities[item.group(1)] = float(item.group(2))
     statistics["equipment_fail_probabilities"] = get_fault_probabilities(statistics, equipment_fail_probabilities)
