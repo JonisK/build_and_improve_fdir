@@ -11,4 +11,6 @@ src/__pycache__/
 src/graph_analysis/__pycache__/
 python3.*-venv
 prism-*.tar.gz
+benchmarks/**/*_report.txt
+benchmarks/**/*_initial_state.txt
 
