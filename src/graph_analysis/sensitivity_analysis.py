@@ -18,9 +18,9 @@ def get_mode_gradients(G, equipment_fault_probabilities, mode_costs):
             node_id = get_node_id(G, column_index_to_mode_name[column_index])
             # node_id = get_node_id(G, row_index_to_equipment_name[row_index])
             modified_fault_probabilities = equipment_fault_probabilities.copy()
-            modified_fault_probabilities[row_index_to_equipment_name[row_index]] *= 2
-            # Normalized partial derivative of the fault probability per mode and component
-            gradient = (get_fault_probability(G, node_id, modified_fault_probabilities) - get_fault_probability(G, node_id, equipment_fault_probabilities)) / modified_fault_probabilities[row_index_to_equipment_name[row_index]]
+            modified_fault_probabilities[row_index_to_equipment_name[row_index]] *= 10
+            # partial derivative of the fault probability per mode and component
+            gradient = (get_fault_probability(G, node_id, modified_fault_probabilities) - get_fault_probability(G, node_id, equipment_fault_probabilities)) / get_fault_probability(G, node_id, equipment_fault_probabilities)
             mode_gradients[row_index, column_index] = gradient
             # increased_mode_cost[row_index, column_index] = get_fault_probability(G, node_id, modified_fault_probabilities)
     return mode_gradients
@@ -48,6 +48,7 @@ def get_sensitivity_analysis(G, equipment_fault_probabilities, mode_costs):
         message += f"Component {row_index_to_equipment_name[index]} has most effect on mode {column_index_to_mode_name[row.argmax()]}\n"
 
     return message
+
 
 
 def get_uncertainty_interval(G, equipment_fault_probabilities, equipment_fault_probabilities_lower_bound,

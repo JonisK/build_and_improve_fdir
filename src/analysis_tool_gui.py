@@ -25,7 +25,7 @@ import re
 import textwrap
 import logging
 import os
-import subprocess
+from datetime import datetime
 
 # Gtk3
 import gi
@@ -107,6 +107,12 @@ class MainWindow(Gtk.Window):
 
         self.configuration_index = {}
 
+        self.analysis_time = 0.0
+        self.check_isolability_time = 0.0
+        self.mcts_isolation_build_time = 0.0
+        self.prism_isolation = 0.0
+        self.check_recoverability_time = 0.0
+
         Gtk.Window.__init__(self, title="Analysis Tool")
         self.set_border_width(10)
         paned = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
@@ -173,9 +179,7 @@ class MainWindow(Gtk.Window):
         grid.attach_next_to(self.button_run_isolation, self.button_export_isolation, Gtk.PositionType.RIGHT, 1, 1)
         self.isolation_info = Gtk.Label()
         self.isolation_info.set_xalign(0)  # left-aligned
-        self.isolation_info.set_markup("<b><big>Isolation info</big></b>\n"
-                                       + " - ? components can be isolated\n"
-                                       + " - ? components cannot be isolated\n")
+        self.reset_isolation()
         grid.attach(self.isolation_info, 0, 9, 2, 1)
 
         self.button_check_recovery = Gtk.Button(label="Check Recovery")
@@ -196,9 +200,7 @@ class MainWindow(Gtk.Window):
         grid.attach_next_to(self.button_run_recovery, self.button_export_recovery, Gtk.PositionType.RIGHT, 1, 1)
         self.recovery_info = Gtk.Label()
         self.recovery_info.set_xalign(0)  # left-aligned
-        self.recovery_info.set_markup("<b><big>Recovery info</big></b>\n"
-                                      + " - ? modes are fault-tolerant\n"
-                                      + " - ? modes are not fault-tolerant\n")
+        self.reset_recovery()
         grid.attach(self.recovery_info, 0, 12, 2, 1)
 
         self.notebook = Gtk.Notebook()
@@ -391,6 +393,12 @@ class MainWindow(Gtk.Window):
 
         self.configuration_index = {}
 
+        self.analysis_time = 0.0
+        self.check_isolability_time = 0.0
+        self.mcts_isolation_build_time = 0.0
+        self.prism_isolation = 0.0
+        self.check_recoverability_time = 0.0
+
         self.page6.set_graph_and_all_equipment(self.graph, self.all_equipment)
         self.page6.set_leaf_name_and_configuration_list(self.component_lists, self.configuration_list)
 
@@ -440,6 +448,8 @@ class MainWindow(Gtk.Window):
             self.button_build_recovery.set_sensitive(False)
             self.button_export_recovery.set_sensitive(False)
 
+            self.reset_isolation()
+            self.reset_recovery()
             self.get_report_initial()
             self.open_file(self.filename, self.page1)
             self.page1.zoom_to_fit()
@@ -542,6 +552,11 @@ class MainWindow(Gtk.Window):
             self.button_check_recovery.set_sensitive(True)
             self.button_export_recovery.set_sensitive(True)
 
+    def reset_isolation(self):
+        self.isolation_info.set_markup("<b><big>Isolation info</big></b>\n"
+                                       + " - ? components can be isolated\n"
+                                       + " - ? components cannot be isolated\n")
+
     def check_isolation(self, button):
         self.button_check_isolation.set_sensitive(False)
         self.terminal_notebook.set_current_page(1)
@@ -623,6 +638,11 @@ class MainWindow(Gtk.Window):
             components="all")
         self.run_isolation_done = True
         self.get_report()
+
+    def reset_recovery(self):
+        self.recovery_info.set_markup("<b><big>Recovery info</big></b>\n"
+                                      + " - ? modes are fault-tolerant\n"
+                                      + " - ? modes are not fault-tolerant\n")
 
     def check_recovery(self, button):
         self.button_check_recovery.set_sensitive(False)
@@ -843,6 +863,21 @@ class MainWindow(Gtk.Window):
                     message += f"\t{component} is not isolable. No cost can be calculated\n"
         else:
             message += f"Execute 'Export PRISM' and 'Run PRISM' to get the isolation cost.\n"
+        message += "\n"
+
+        # Execution time log
+        if self.analysis_time:
+            message += f"Analyzing the graph took {self.analysis_time} seconds.\n"
+        if self.check_isolability_time:
+            message += f"Checking isolability took {self.check_isolability_time} seconds.\n"
+        if self.mcts_isolation_build_time:
+            message += f"Building MCTS isolation took {self.mcts_isolation_build_time} seconds.\n"
+        if self.prism_isolation:
+            message += f"Checking isolation cost took {self.prism_isolation} seconds.\n"
+        if self.check_recoverability_time:
+            message += f"Checking recoverability took {self.check_recoverability_time} seconds.\n"
+
+        message += f"\nThis report was generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\n"
 
         end_iter = self.report_text.get_buffer().get_end_iter()
         self.report_text.get_buffer().insert_markup(end_iter, message, -1)
